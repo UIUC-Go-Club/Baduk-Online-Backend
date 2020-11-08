@@ -28,7 +28,7 @@
                 var message = { name: $("#name").val(), message: $("#message").val()}
                 postMessage(message)
             })
-            getMessages()
+            // getMessages()
         })
 
         socket.on('message', addMessage)

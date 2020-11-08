@@ -11,6 +11,8 @@ app.use(express.static(__dirname))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
 
+var session = require('express-session');
+var cookieParser = require('cookie-parser');
 // app.get('/room/:roomId', (req, res) => {
 //     var roomId = req.params.roomId
 //     res.send(`welcome to game room: ${roomId}`)
@@ -21,8 +23,8 @@ var io = require('socket.io')(http)
 var mongoose = require('mongoose')
 mongoose.Promise = Promise
 
-// var dbUrl = 'mongodb://localhost:27017/baduk_online'
-var dbUrl = 'mongodb+srv://user:user@cluster0.4o6w5.mongodb.net/messages?retryWrites=true&w=majority'
+var dbUrl = 'mongodb://localhost:27017/baduk_online'
+// var dbUrl = 'mongodb+srv://user:user@cluster0.4o6w5.mongodb.net/messages?retryWrites=true&w=majority'
 
 var Message = mongoose.model('Message', {
     name: String,
@@ -75,6 +77,9 @@ io.on('connection', (socket) => {
         console.log(`received move sign: ${sign}, [x,y]: [${x}, ${y}]`);
         socket.emit('move', {sign: sign*-1, x:1, y:1})
     })
+    require('./services/chatService')(socket, io);
+    require('./services/roomService')(socket, io);
+    return io
 })
 
 mongoose.connect(dbUrl, { useNewUrlParser: true }, (err) => {
@@ -85,6 +90,7 @@ app.use(function(req, res, next) {
     req.io = io;
     next();
 });
+
 const routes = require('./routes'); //导入自定义路由文件，创建模块化路由
 app.use('/', routes);
 

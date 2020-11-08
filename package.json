@@ -12,10 +12,13 @@
   "license": "ISC",
   "dependencies": {
     "@sabaki/go-board": "^1.4.2",
+    "@sabaki/immutable-gametree": "^1.9.3",
     "@sabaki/shudan": "^1.5.4",
     "body-parser": "^1.18.2",
+    "cookie-parser": "^1.4.5",
     "cors": "^2.8.5",
     "express": "^4.15.5",
+    "express-session": "^1.17.1",
     "jade": "^1.11.0",
     "mongodb": "^3.6.3",
     "mongoose": "^5.10.13",

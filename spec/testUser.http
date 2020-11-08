@@ -1,0 +1,12 @@
+POST http://localhost:7777/user/abel
+Content-Type: application/json
+
+{
+  "username": "abel",
+  "email": "abel@something.com",
+  "password": "password",
+  "rank": "3D"
+}
+
+###
+GET http://localhost:7777/user/abel
