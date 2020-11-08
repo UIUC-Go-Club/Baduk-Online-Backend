@@ -11,10 +11,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@sabaki/go-board": "^1.4.2",
+    "@sabaki/shudan": "^1.5.4",
     "body-parser": "^1.18.2",
     "cors": "^2.8.5",
     "express": "^4.15.5",
-    "mongoose": "^4.11.13",
+    "jade": "^1.11.0",
+    "mongodb": "^3.6.3",
+    "mongoose": "^5.10.13",
     "socket.io": "^2.0.3"
   },
   "devDependencies": {

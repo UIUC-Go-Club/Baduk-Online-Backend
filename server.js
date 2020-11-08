@@ -4,17 +4,25 @@ var cors = require('cors');
 var app = express()
 app.use(cors({origin: '*'}));
 var http = require('http').Server(app)
-var io = require('socket.io')(http)
-// io.origins('*:*')
-var mongoose = require('mongoose')
+app.use('/static', express.static('public'))
+app.set('view engine', 'jade');
 
 app.use(express.static(__dirname))
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: false }))
 
+// app.get('/room/:roomId', (req, res) => {
+//     var roomId = req.params.roomId
+//     res.send(`welcome to game room: ${roomId}`)
+// })
+
+var io = require('socket.io')(http)
+// io.origins('*:*')
+var mongoose = require('mongoose')
 mongoose.Promise = Promise
 
-var dbUrl = 'mongodb://localhost:27017/baduk_online'
+// var dbUrl = 'mongodb://localhost:27017/baduk_online'
+var dbUrl = 'mongodb+srv://user:user@cluster0.4o6w5.mongodb.net/messages?retryWrites=true&w=majority'
 
 var Message = mongoose.model('Message', {
     name: String,
@@ -64,10 +72,30 @@ io.on('connection', (socket) => {
     console.log('a user connected')
 })
 
-mongoose.connect(dbUrl, { useMongoClient: true }, (err) => {
+mongoose.connect(dbUrl, { useNewUrlParser: true }, (err) => {
     console.log('mongo db connection', err)
 })
+
+app.use(function(req, res, next) {
+    req.io = io;
+    next();
+});
+const routes = require('./routes'); //导入自定义路由文件，创建模块化路由
+app.use('/', routes);
 
 var server = http.listen(7777, () => {
     console.log('server is listening on port', server.address().port)
 })
+
+
+// module.exports = function(io) {
+//     let router = express.Router()
+//
+//     // define routes
+//     // io is available in this scope
+//     router.get(...)
+//
+//     return router;
+// }
+// app.set("io", io);
+// module.exports = app;
