@@ -29,10 +29,10 @@
                 var message = { name: $("#name").val(), message: $("#message").val()}
                 postMessage(message)
             })
-            getMessages()
+            // getMessages()
         })
 
-        socket.on('message', addMessage)
+        socket.on('board', addMessage)
 
         function addMessage(message){
             $("#messages").append(`<h4> ${message.name} </h4> <p> ${message.message} </p>`)
@@ -45,7 +45,7 @@
         }
 
         function postMessage(message) {
-            $.post('http://localhost:7777/messages', message)
+            $.post('http://localhost:7777/game', message)
         }
     }
 </script>
