@@ -70,6 +70,11 @@ app.post('/messages', async (req, res) => {
 
 io.on('connection', (socket) => {
     console.log('a user connected')
+    socket.on('move', data => {
+        const { sign, x, y } = data;
+        console.log(`received move sign: ${sign}, [x,y]: [${x}, ${y}]`);
+        socket.emit('move', {sign: sign*-1, x:1, y:1})
+    })
 })
 
 mongoose.connect(dbUrl, { useNewUrlParser: true }, (err) => {
