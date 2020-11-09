@@ -14,16 +14,17 @@ const {calcScoreHeuristic, getScore} = require('./helpers')
 async function main (){
     let getId = (id => () => id++)(0)
     let rootNodes = sgf.parseFile('sgfs/complete.sgf')
+    console.log(rootNodes)
     let gameTrees = rootNodes.map(rootNode => {
         return new GameTree({getId, root: rootNode})
     })
-
-
+    //
+    //
     console.log(gameTrees[0].getHeight())
-    console.log(gameTrees[0])
-    let scoreBoard = getBoard(gameTrees[0], 276).clone()
-    let r = await calcScoreHeuristic(scoreBoard)
-    console.log(r)
+    // console.log(gameTrees[0])
+    // let scoreBoard = getBoard(gameTrees[0], 276).clone()
+    // let r = await calcScoreHeuristic(scoreBoard)
+    // console.log(r)
 //     deadstones
 //         .guess(scoreBoard.signMap, {
 //             finished: true,

@@ -3,7 +3,7 @@ const GameTree = require("@sabaki/crdt-gametree/src/GameTree");
 const {calcScoreHeuristic} = require("../utils/helpers");
 const {getBoard} = require("../utils/gametree");
 
-describe('calc score', () => {
+describe('test calc score', () => {
     let getId = (id => () => id++)(0)
     let rootNodes = sgf.parseFile('sgfs/complete.sgf')
     let gameTrees = rootNodes.map(rootNode => {
@@ -15,12 +15,17 @@ describe('calc score', () => {
     })
 
     let scoreBoard = getBoard(gameTrees[0], 276).clone()
-    it('should give us following score', async () => {
+    it('should tell us white is the winner', async () => {
+        let r = await calcScoreHeuristic(scoreBoard)
+        expect(r.territoryScore > 0 ? 'black' : 'white').toBe('white')
+    })
+
+    it('should give us the following score', async () => {
         let r = await calcScoreHeuristic(scoreBoard)
         expect(JSON.stringify(r)).toBe(JSON.stringify({
-                area: [ 149, 211 ],
-                territory: [ 56, 89 ],
-                captures: [ 14, 43 ],
+                area: [149, 211],
+                territory: [56, 89],
+                captures: [14, 43],
                 areaScore: -69.5,
                 territoryScore: -69.5
             })

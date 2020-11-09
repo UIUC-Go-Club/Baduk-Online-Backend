@@ -8,6 +8,12 @@ const {
 
 let boardCache = {}
 
+/**
+ * sabaki get board from sgf tree method
+ * @param tree
+ * @param id
+ * @returns {null}
+ */
 function getBoard(tree, id) {
     let treePositions = []
     let board = null

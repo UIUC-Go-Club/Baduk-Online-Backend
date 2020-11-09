@@ -36,6 +36,9 @@ const GameSchema = mongoose.Schema({
     },
     sgf:{
         type: String
+    },
+    board:{
+        type: String
     }
 })
 
@@ -58,6 +61,9 @@ const RoomSchema = mongoose.Schema({
         areaScore: {type: Number},
         territoryScore: {type: Number},
     },
+    regretInitiator:{
+        type: Number
+    },
     players:[{
         username:{
             type: String
@@ -76,11 +82,17 @@ const RoomSchema = mongoose.Schema({
         },
         ackGameEnd:{
             type: Boolean
+        },
+        ackRegret:{
+            type: Boolean
         }
     }],
     bystanders:[{
         type: String
     }],
+    CurrentBoardSignedMap:{
+        type: String
+    }
 })
 
 const User = mongoose.model('User', UserSchema)
