@@ -3,10 +3,10 @@ const createBoard = require('../models/board')
 
 let boards_dict = {}
 
-function reverseTurn(number){
-    if(number === 0){
+function reverseTurn(number) {
+    if (number === 0) {
         return 1
-    }else{
+    } else {
         return 0
     }
 }
@@ -26,9 +26,13 @@ module.exports = function (socket, io) {
             }
 
             // when the same user join again
-            for (let player of room.players){
-                if(player.username === data.username){
-                    socket.emit('info', {description:'username', username:data.username})
+            for (let player of room.players) {
+                if (player.username === data.username) {
+                    socket.emit('info', {
+                        fieldName: 'username',
+                        username: data.username,
+                        description: 'current username'
+                    })
                     socket.join(data.room_id)
                     return
                 }
@@ -51,7 +55,11 @@ module.exports = function (socket, io) {
             await room.save()
 
             socket.join(data.room_id)
-            socket.emit('info', {description:'username', username:data.username})
+            socket.emit('info', {
+                fieldName: 'username',
+                username: data.username,
+                description: 'current username'
+            })
             io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
 
             // start the game when we have enough players
@@ -73,11 +81,12 @@ module.exports = function (socket, io) {
 
     socket.on("move", async (data) => {
         let room_id = data.room_id
+        let sign = data.sign
+        let vertex = data.vertex
+
         let room = await Room.findOne({room_id: data.room_id})
         room.currentTurn = reverseTurn(room.currentTurn)
         room.save()
-        let sign = data.sign
-        let vertex = data.vertex
         let newBoard = boards_dict[room_id].makeMove(sign, vertex)
         boards_dict[room_id] = newBoard
         io.in(room_id).emit('move', JSON.stringify(newBoard.signMap))
@@ -88,7 +97,7 @@ module.exports = function (socket, io) {
         room.winner = data.username === room.players[0].username ? 1 : 0
         room.gameFinished = true
         room.save()
-        io.sockets.in(data.room_id).emit('game ended', room)
+        io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
     })
 
     socket.on("disconnect", () => {
