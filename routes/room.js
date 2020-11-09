@@ -58,4 +58,17 @@ router.delete('/:room_id', async function (req, res) {
         console.log(`a room deleted`)
     }
 })
+
+router.delete('/delete/all', async function (req, res) {
+    try {
+        await Room.deleteMany({})
+        res.sendStatus(204)
+    } catch (error) {
+        res.sendStatus(500)
+        return console.error(error)
+    } finally {
+        console.log(`all rooms deleted`)
+    }
+})
+
 module.exports = router;

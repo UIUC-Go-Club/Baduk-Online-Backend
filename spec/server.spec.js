@@ -92,3 +92,12 @@ describe('get room info', () => {
     })
 })
 
+describe('delete room info', () => {
+    it('should return 204 Ok', (done) => {
+        request.get(`http://localhost:${host}/room/${testRoomname}`, (err, res) => {
+            expect(res.statusCode).toEqual(200)
+            done()
+        })
+    })
+})
+

@@ -11,13 +11,23 @@ function reverseTurn(number) {
     }
 }
 
-function checkConditionOnAll(array, field, expected){
-    for(let i = 0; i < array.length; i++){
-        if(array[i][field] !== expected){
+function checkConditionOnAll(array, field, expected) {
+    for (let i = 0; i < array.length; i++) {
+        if (array[i][field] !== expected) {
             return false
         }
     }
     return true
+}
+
+function findWinner(room) {
+    let winningColor = room.scoreResult.territory > 0 ? 'black' : 'white'
+    for (let i = 0; i < room.players.length; i++) {
+        if (room.players[i].color === winningColor) {
+            return i
+        }
+    }
+
 }
 
 module.exports = function (socket, io) {
@@ -31,6 +41,7 @@ module.exports = function (socket, io) {
             if (room == null) {
                 room = new Room({
                     room_id: data.room_id,
+                    gameFinished: false,
                 })
             }
 
@@ -97,12 +108,14 @@ module.exports = function (socket, io) {
         let room = await Room.findOne({room_id: data.room_id})
         room.currentTurn = reverseTurn(room.currentTurn)
         room.save()
+        console.log(sign, vertex)
         let newBoard = boards_dict[room_id].makeMove(sign, vertex)
         boards_dict[room_id] = newBoard
         io.in(room_id).emit('move', JSON.stringify(newBoard.signMap))
     })
 
     socket.on("resign", async (data) => {
+        console.log("resign is entered")
         let room = await Room.findOne({room_id: data.room_id})
         room.winner = data.username === room.players[0].username ? 1 : 0
         room.gameFinished = true
@@ -111,6 +124,7 @@ module.exports = function (socket, io) {
     })
 
     socket.on("calc score", async (data) => {
+        console.log("calc score is called")
         let room_id = data.room_id
         let room = await Room.findOne({room_id: data.room_id})
         let scoreResult = await calcScoreHeuristic(boards_dict[room_id].clone())
@@ -123,13 +137,14 @@ module.exports = function (socket, io) {
 
 
     socket.on("game end init", async (data) => {
-        if (data.username == null || data.room_id == null){
+        console.log("game end init is entered")
+        if (data.username == null || data.room_id == null) {
             return
         }
 
         let room = await Room.findOne({room_id: data.room_id})
-        for(let i = 0; i < room.players.length; i++){
-            if (room.players[i].username === data.username){
+        for (let i = 0; i < room.players.length; i++) {
+            if (room.players[i].username === data.username) {
                 room.players[i].ackGameEnd = true
             }
         }
@@ -140,27 +155,32 @@ module.exports = function (socket, io) {
     })
 
     socket.on("game end response", async (data) => {
-        if (data.username == null || data.room_id == null || data.ackGameEnd == null){
+        console.log("game end response is entered")
+        if (data.username == null || data.room_id == null || data.answer == null) {
             return
         }
-        if(data.ackGameEnd === true){
+        if (data.answer === true) {
+            console.log("response with true")
             let room = await Room.findOne({room_id: data.room_id})
-            for(let i = 0; i < room.players.length; i++){
-                if (room.players[i].username === data.username){
+            for (let i = 0; i < room.players.length; i++) {
+                if (room.players[i].username === data.username) {
                     room.players[i].ackGameEnd = true
                 }
             }
             await room.save()
-            if (checkConditionOnAll(room.players, 'ackGameEnd', true)){
+            if (checkConditionOnAll(room.players, 'ackGameEnd', true)) {
+                console.log("game end")
                 room.gameFinished = true
+                let winner_index = findWinner(room)
+                room.winner = winner_index
                 await room.save()
-                io.sockets.in(data.room_id).emit('game end result', JSON.stringify( room))
+                io.sockets.in(data.room_id).emit('game end result', JSON.stringify(room))
             }
-        }
-        else{
+        } else {
+            console.log("somebody refuse to end")
             let room = await Room.findOne({room_id: data.room_id})
-            for(let i = 0; i < room.players.length; i++){
-                if (room.players[i].username === data.username){
+            for (let i = 0; i < room.players.length; i++) {
+                if (room.players[i].username === data.username) {
                     room.players[i].ackGameEnd = false
                 }
             }
@@ -169,11 +189,11 @@ module.exports = function (socket, io) {
         }
 
 
-
         // io.sockets.in(data.room_id).emit('game ended init', JSON.stringify(room))
     })
 
     socket.on("disconnect", (data) => {
+        console.log("disconnect is entered")
         socket.emit('info', {
             fieldName: 'username',
             username: data.username,
@@ -183,3 +203,4 @@ module.exports = function (socket, io) {
         console.log("disconnected");
     });
 };
+
