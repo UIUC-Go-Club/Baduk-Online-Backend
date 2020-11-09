@@ -103,10 +103,11 @@ module.exports = function (socket, io) {
     socket.on("calc score", async (data) => {
         let room_id = data.room_id
         let room = await Room.findOne({room_id: data.room_id})
-        let scoreResult = calcScoreHeuristic(boards_dict[room_id].clone())
+        let scoreResult = await calcScoreHeuristic(boards_dict[room_id].clone())
         room.scoreResult = scoreResult
         room.save()
-        io.sockets.in(data.room_id).emit('cal score', JSON.stringify(scoreResult))
+        console.log(JSON.stringify(scoreResult))
+        io.sockets.in(data.room_id).emit('calc score', JSON.stringify(scoreResult))
     })
 
     socket.on("end game", async (data) => {
