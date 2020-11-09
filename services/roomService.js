@@ -1,6 +1,6 @@
 const {Room} = require('../models/schema')
 const createBoard = require('../models/board')
-
+const {calcScoreHeuristic} = require('../utils/helpers')
 let boards_dict = {}
 
 function reverseTurn(number) {
@@ -99,6 +99,24 @@ module.exports = function (socket, io) {
         room.save()
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
     })
+
+    socket.on("calc score", async (data) => {
+        let room_id = data.room_id
+        let room = await Room.findOne({room_id: data.room_id})
+        let scoreResult = calcScoreHeuristic(boards_dict[room_id].clone())
+        room.scoreResult = scoreResult
+        room.save()
+        io.sockets.in(data.room_id).emit('cal score', JSON.stringify(scoreResult))
+    })
+
+    socket.on("end game", async (data) => {
+        let room = await Room.findOne({room_id: data.room_id})
+        room.gameFinished = true
+        room.save()
+        io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
+    })
+
+
 
     socket.on("disconnect", (data) => {
         socket.emit('info', {

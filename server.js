@@ -99,7 +99,7 @@ var server = http.listen(7777, () => {
 })
 
 
-// module.exports = function(io) {
+// utils.exports = function(io) {
 //     let router = express.Router()
 //
 //     // define routes
@@ -109,4 +109,4 @@ var server = http.listen(7777, () => {
 //     return router;
 // }
 // app.set("io", io);
-// module.exports = app;
+// utils.exports = app;

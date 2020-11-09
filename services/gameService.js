@@ -1,6 +1,6 @@
 // const {Room} = require('../models/schema')
 //
-// module.exports = function(socket) {
+// utils.exports = function(socket) {
 //     socket.on("join room", (data) => {
 //         console.log('in room');
 //         let newUser = joinUser(socket.id, data.username, data.roomName)

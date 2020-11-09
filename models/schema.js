@@ -52,6 +52,12 @@ const RoomSchema = mongoose.Schema({
     gameFinished:{
         type: Boolean
     },
+    scoreResult: {
+        area: [{type:Number}],
+        territory: [{type:Number}],
+        areaScore: {type: Number},
+        territoryScore: {type: Number},
+    },
     players:[{
         username:{
             type: String
