@@ -100,7 +100,7 @@ module.exports = function (socket, io) {
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
     })
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", (data) => {
         socket.emit('info', {
             fieldName: 'username',
             username: data.username,
