@@ -101,6 +101,11 @@ module.exports = function (socket, io) {
     })
 
     socket.on("disconnect", () => {
+        socket.emit('info', {
+            fieldName: 'username',
+            username: data.username,
+            description: 'current username disconnect'
+        })
         socket.disconnect(0);
         console.log("disconnected");
     });
