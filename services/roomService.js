@@ -3,6 +3,14 @@ const createBoard = require('../models/board')
 
 let boards_dict = {}
 
+function reverseTurn(number){
+    if(number === 0){
+        return 1
+    }else{
+        return 0
+    }
+}
+
 module.exports = function (socket, io) {
     socket.on("join_room_player", async (data) => {
         try {
@@ -32,10 +40,14 @@ module.exports = function (socket, io) {
                 await room.save()
             }
 
-            await socket.join(data.room_id)
-            // io.emit('message', {name: 'new user', message: `${data.username} join the room`})
-            io.to(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
-
+            // socket.join(data.room_id)
+            // io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
+        //
+            socket.join(data.room_id)
+        //     // socket.rooms.push(data.room_id)
+        //     io.emit('message', {name: 'new user', message: `${data.username} join the room`})
+            io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
+        //
             if (room.players.length === 2) {
                 let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
                 let second_color = first_color === 'white' ? 'black' : 'white'
@@ -43,7 +55,7 @@ module.exports = function (socket, io) {
                 room.players[1].color = second_color
                 room.currentTurn = first_color === 'black' ? 0 : 1
                 await room.save()
-                io.in(room.room_id).emit('game start', room)
+                io.sockets.in(room.room_id).emit('game start', room)
                 boards_dict[room.room_id] = createBoard()
             }
         } catch (error) {
@@ -54,11 +66,29 @@ module.exports = function (socket, io) {
 
     socket.on("move", async (data) => {
         let room_id = data.room_id
+        let room = await Room.findOne({room_id: data.room_id})
+        room.currentTurn = reverseTurn(room.currentTurn)
+        room.save()
         let sign = data.sign
         let vertex = data.vertex
         let newBoard = boards_dict[room_id].makeMove(sign, vertex)
         boards_dict[room_id] = newBoard
         io.in(room_id).emit('move', newBoard)
+    })
+
+    socket.on("resign", async (data) => {
+        let room = await Room.findOne({room_id: data.room_id})
+        room.winner = data.username == room.players[0].username ? 1 : 0
+        room.save()
+        io.sockets.in(data.room_id).emit('game ended', room)
+    })
+
+
+    socket.on("resign", async (data) => {
+        let room = await Room.findOne({room_id: data.room_id})
+        room.winner = data.username == room.players[0].username ? 1 : 0
+        room.save()
+        io.sockets.in(data.room_id).emit('game ended', room)
     })
 
     // socket.on("disconnect", () => {

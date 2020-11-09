@@ -1,4 +1,5 @@
 <!doctype html>
+<script src="../models/schema.js"></script>
 <script src="../services/roomService.js"></script>
 <script src="../services/gameService.js"></script>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
@@ -28,27 +29,47 @@
         let userName = prompt("whats your name");
         let room = prompt("room name");
 
-        let socket = io()
+        var socket = io()
         socket.emit("join_room_player", {username : userName, room_id : room});
+        $(() => {
+            $("#send").click(()=>{
+                var message = { name: $("#name").val(), message: $("#message").val()}
+                postMessage(message)
+            })
+        })
 
-        // $(() => {
-        //     $("#send").click(()=>{
-        //         var message = { name: $("#name").val(), message: $("#message").val()}
-        //         postMessage(message)
-        //     })
-        //     // getMessages()
-        // })
-        //
-        // socket.on('board', addMessage)
-        socket.on('game start', testGameStart)
         socket.on('message', addMessage)
-        function testGameStart(info){
-            console.log(info)
-        }
-        //
+        socket.on('game start', console.log)
         function addMessage(message){
+            console.log(message)
             $("#messages").append(`<h4> ${message.name} </h4> <p> ${message.message} </p>`)
         }
+
+        function postMessage(message) {
+            $.post('http://localhost:7777/messages', message)
+        }
+
+
+
+        //
+        // // $(() => {
+        // //     $("#send").click(()=>{
+        // //         var message = { name: $("#name").val(), message: $("#message").val()}
+        // //         postMessage(message)
+        // //     })
+        // //     // getMessages()
+        // // })
+        // //
+        // // socket.on('board', addMessage)
+        // socket.on('game start', testGameStart)
+        // socket.on('message', addMessage)
+        // function testGameStart(info){
+        //     console.log(info)
+        // }
+        // //
+        // function addMessage(message){
+        //     $("#messages").append(`<h4> ${message.name} </h4> <p> ${message.message} </p>`)
+        // }
         //
         // function getMessages() {
         //     $.get('http://localhost:7777/messages', (data) => {

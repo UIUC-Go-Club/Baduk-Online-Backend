@@ -46,6 +46,9 @@ const RoomSchema = mongoose.Schema({
     currentTurn:{  // index 0 or 1, use room.players[index] to find current player
         type: Number
     },
+    winner: {
+        type: Number
+    },
     players:[{
         username:{
             type: String
