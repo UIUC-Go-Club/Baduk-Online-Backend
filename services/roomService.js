@@ -116,6 +116,7 @@ module.exports = function (socket, io) {
         let scoreResult = await calcScoreHeuristic(boards_dict[room_id].clone())
         room.scoreResult = scoreResult
         room.save()
+        console.log(JSON.stringify(scoreResult))
         io.sockets.in(data.room_id).emit('calc score', JSON.stringify(scoreResult))
     })
 
