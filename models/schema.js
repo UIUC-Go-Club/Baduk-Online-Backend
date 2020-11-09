@@ -73,6 +73,9 @@ const RoomSchema = mongoose.Schema({
         },
         time_out_chance:{
             type: Number
+        },
+        ackGameEnd:{
+            type: Boolean
         }
     }],
     bystanders:[{

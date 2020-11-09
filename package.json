@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "jasmine"
+    "test": "jest --config ./jest.config.json"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +31,7 @@
   "devDependencies": {
     "@types/jasmine": "^3.6.1",
     "jasmine": "^2.99.0",
+    "jest": "^26.6.3",
     "request": "^2.83.0"
   }
 }

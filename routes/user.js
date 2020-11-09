@@ -8,7 +8,7 @@ router.get('/:username', async function (req, res) {
     res.send(user)
 })
 
-router.post('/:username', function (req, res) {
+router.post('/:username', async function (req, res) {
     try {
         let username = req.params.username
         if (username == null) {
@@ -16,7 +16,7 @@ router.post('/:username', function (req, res) {
         }
 
         let newUser = new User(req.body)
-        newUser.save()
+        await newUser.save()
         console.log('saved')
 
         res.sendStatus(201)
@@ -24,7 +24,23 @@ router.post('/:username', function (req, res) {
         res.sendStatus(500)
         return console.error(error)
     } finally {
-        console.log('message post called')
+        console.log('new users is saved')
+    }
+})
+
+router.delete('/:username', async function (req, res) {
+    try {
+        let username = req.params.username
+        if (username == null) {
+            res.sendStatus(400)
+        }
+        await User.deleteOne({username: username})
+        res.sendStatus(204)
+    } catch (error) {
+        res.sendStatus(500)
+        return console.error(error)
+    } finally {
+        console.log(`a user deleted`)
     }
 })
 

@@ -1,7 +1,7 @@
 const sgf = require("@sabaki/sgf");
 const GameTree = require("@sabaki/crdt-gametree/src/GameTree");
-const {calcScoreHeuristic} = require("../../utils/helpers");
-const {getBoard} = require("../../utils/gametree");
+const {calcScoreHeuristic} = require("../utils/helpers");
+const {getBoard} = require("../utils/gametree");
 
 describe('calc score', () => {
     let getId = (id => () => id++)(0)
