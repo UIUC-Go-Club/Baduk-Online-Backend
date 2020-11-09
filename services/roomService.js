@@ -121,7 +121,7 @@ module.exports = function (socket, io) {
     })
 
 
-    socket.on("end game init", async (data) => {
+    socket.on("game end init", async (data) => {
         if (data.username == null || data.room_id == null){
             return
         }
@@ -133,12 +133,12 @@ module.exports = function (socket, io) {
             }
         }
         room.save()
-        socket.broadcast.to(data.room_id).emit('game ended init', JSON.stringify(room))
+        socket.broadcast.to(data.room_id).emit('game end init', JSON.stringify(room))
 
         // io.sockets.in(data.room_id).emit('game ended init', JSON.stringify(room))
     })
 
-    socket.on("end game response", async (data) => {
+    socket.on("game end response", async (data) => {
         if (data.username == null || data.room_id == null || data.answer == null){
             return
         }
