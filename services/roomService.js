@@ -55,7 +55,7 @@ module.exports = function (socket, io) {
             }
 
             room.players.push({
-                testUsername: data.username,
+                username: data.username,
                 color: undefined,
                 initial_time: initial_time,
                 countdown: countdown,
@@ -117,7 +117,8 @@ module.exports = function (socket, io) {
         room.scoreResult = scoreResult
         room.save()
         console.log(JSON.stringify(scoreResult))
-        io.sockets.in(data.room_id).emit('calc score', JSON.stringify(scoreResult))
+        // io.sockets.in(data.room_id).emit('calc score', JSON.stringify(scoreResult))
+        socket.emit('calc score', JSON.stringify(scoreResult))
     })
 
 
@@ -139,38 +140,32 @@ module.exports = function (socket, io) {
     })
 
     socket.on("game end response", async (data) => {
-        if (data.username == null || data.room_id == null || data.answer == null){
+        if (data.username == null || data.room_id == null || data.ackGameEnd == null){
             return
         }
-        if(data.answer === 'Yes'){
+        if(data.ackGameEnd === true){
             let room = await Room.findOne({room_id: data.room_id})
             for(let i = 0; i < room.players.length; i++){
                 if (room.players[i].username === data.username){
                     room.players[i].ackGameEnd = true
                 }
             }
-            room.save()
+            await room.save()
             if (checkConditionOnAll(room.players, 'ackGameEnd', true)){
-                io.sockets.in(data.room_id).emit('game end result', JSON.stringify( {
-                    fieldName: 'gameEndResult',
-                    gameEndResult: true,
-                    description: 'all players in the room wants game to end'
-                }))
+                room.gameFinished = true
+                await room.save()
+                io.sockets.in(data.room_id).emit('game end result', JSON.stringify( room))
             }
         }
         else{
-            io.sockets.in(data.room_id).emit('game end result', JSON.stringify({
-                fieldName: 'gameEndResult',
-                gameEndResult: false,
-                description: 'some players in the room do not want to end'
-            }))
             let room = await Room.findOne({room_id: data.room_id})
             for(let i = 0; i < room.players.length; i++){
                 if (room.players[i].username === data.username){
                     room.players[i].ackGameEnd = false
                 }
             }
-            room.save()
+            await room.save()
+            io.sockets.in(data.room_id).emit('game end result', JSON.stringify(room))
         }
 
 
