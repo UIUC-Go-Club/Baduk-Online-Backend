@@ -72,7 +72,7 @@ app.post('/messages', async (req, res) => {
 
 io.on('connection', (socket) => {
     console.log('a user connected')
-    require('./services/chatService')(socket, io);
+    // require('./services/chatService')(socket, io);
     require('./services/roomService')(socket, io);
     return io
 })
