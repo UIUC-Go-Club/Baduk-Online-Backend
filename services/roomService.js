@@ -52,12 +52,8 @@ module.exports = function (socket, io) {
             // when the same user join again
             for (let player of room.players) {
                 if (player.username === data.username) {
-                    socket.emit('info', {
-                        fieldName: 'username',
-                        username: data.username,
-                        description: 'current username'
-                    })
                     socket.join(data.room_id)
+                    socket.emit('game start', JSON.stringify(room))
                     return
                 }
             }
@@ -99,7 +95,7 @@ module.exports = function (socket, io) {
                 await room.save()
 
                 boards_dict[room.room_id] = newBoard
-                boards_past_dict[room.room_id] = [boards_dict[room.room_id]]
+                boards_past_dict[room.room_id] = [newBoard]
 
                 io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
             }
@@ -118,10 +114,10 @@ module.exports = function (socket, io) {
         room.currentTurn = reverseTurn(room.currentTurn)
         let newBoard = boards_dict[room_id].makeMove(sign, vertex)
         room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
-        room.save()
+        await room.save()
         console.log(sign, vertex)
 
-        boards_past_dict[room_id] = boards_dict[room_id]
+        boards_past_dict[room_id].push(newBoard)
         boards_dict[room_id] = newBoard
         io.in(room_id).emit('move', JSON.stringify(room))
     })
@@ -224,52 +220,54 @@ module.exports = function (socket, io) {
     });
 
     socket.on("regret response", async (data) => {
-        let room_id = data.room_id
-        console.log("regret response is entered")
-        if (data.username == null || data.room_id == null || data.answer == null) {
-            return
-        }
-        if (data.answer === true) {
-            console.log("regret response with true")
-            let room = await Room.findOne({room_id: data.room_id})
-            for (let i = 0; i < room.players.length; i++) {
-                if (room.players[i].username === data.username) {
-                    room.players[i].ackRegret = true
-                }
+        try{
+            let room_id = data.room_id
+            console.log("regret response is entered")
+            if (data.username == null || data.room_id == null || data.answer == null) {
+                return
             }
-            await room.save()
-            if (checkConditionOnAll(room.players, 'ackRegret', true)) {
-                // do regret
-                // current user regret, reset 2 moves, else reset 1 move is enough
-                let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
-                while(movesToPop > 0 && boards_past_dict[room_id].length > 1){
-                    boards_past_dict[room_id].pop()
+            if (data.answer === true) {
+                console.log("regret response with true")
+                let room = await Room.findOne({room_id: data.room_id})
+                for (let i = 0; i < room.players.length; i++) {
+                    if (room.players[i].username === data.username) {
+                        room.players[i].ackRegret = true
+                    }
                 }
-
-                let newBoard = last(boards_past_dict[data.room_id])
-                room.currentTurn = room.regretInitiator
-                room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
-                room.gameStarted = true
                 await room.save()
+                if (checkConditionOnAll(room.players, 'ackRegret', true)) {
+                    // do regret
+                    // current user regret, reset 2 moves, else reset 1 move is enough
+                    let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
+                    while(movesToPop > 0 && boards_past_dict[room_id].length > 1){
+                        boards_past_dict[room_id].pop()
+                    }
 
-                boards_dict[room_id] = newBoard
-                boards_past_dict[room_id] = boards_dict[room_id]
-                io.in(room_id).emit('regret result', JSON.stringify(room))
-                // io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
-            }
-        } else {
-            console.log("others refuse to regret a move")
-            let room = await Room.findOne({room_id: data.room_id})
-            for (let i = 0; i < room.players.length; i++) {
-                if (room.players[i].username === data.username) {
-                    room.players[i].ackRegret = false
+                    let newBoard = last(boards_past_dict[data.room_id])
+                    room.currentTurn = room.regretInitiator
+                    room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
+                    room.gameStarted = true
+                    await room.save()
+
+                    boards_dict[room_id] = newBoard
+                    io.in(room_id).emit('regret result', JSON.stringify(room))
+                    // io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
                 }
+            } else {
+                console.log("others refuse to regret a move")
+                let room = await Room.findOne({room_id: data.room_id})
+                for (let i = 0; i < room.players.length; i++) {
+                    if (room.players[i].username === data.username) {
+                        room.players[i].ackRegret = false
+                    }
+                }
+                await room.save()
+                io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
             }
-            await room.save()
-            io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
         }
-
-        // io.sockets.in(data.room_id).emit('game ended init', JSON.stringify(room))
+        catch (error){
+            console.log(error)
+        }
     })
 
     socket.on("disconnect", (data) => {

@@ -22,83 +22,99 @@ const UserSchema = mongoose.Schema({
 })
 
 const GameSchema = mongoose.Schema({
-    game_id:{
+    game_id: {
         type: String
     },
-    white:{
+    white: {
         type: String
     },
-    black:{
+    black: {
         type: String
     },
-    winner:{
+    winner: {
         type: String
     },
-    sgf:{
+    sgf: {
         type: String
     },
-    board:{
+    board: {
         type: String
     }
 })
 
 const RoomSchema = mongoose.Schema({
-    room_id:{
+    room_id: {
         type: String
     },
-    currentTurn:{  // index 0 or 1, use room.players[index] to find current player
+    currentTurn: {  // index 0 or 1, use room.players[index] to find current player
         type: Number
     },
     winner: {
         type: Number
     },
-    gameStarted:{
-        type:Boolean
+    gameStarted: {
+        type: Boolean
     },
-    gameFinished:{
+    gameFinished: {
         type: Boolean
     },
     scoreResult: {
-        area: [{type:Number}],
-        territory: [{type:Number}],
+        area: [{type: Number}],
+        territory: [{type: Number}],
         areaScore: {type: Number},
         territoryScore: {type: Number},
     },
-    regretInitiator:{
+    regretInitiator: {
         type: Number
     },
-    players:[{
-        username:{
+    players: [{
+        username: {
             type: String
         },
-        color:{ // black or white or undefined
+        color: { // black or white or undefined
             type: String
         },
-        initial_time:{
+        initial_time: {
             type: Number
         },
-        countdown:{
+        countdown: {
             type: Number
         },
-        time_out_chance:{
+        time_out_chance: {
             type: Number
         },
-        ackGameEnd:{
+        ackGameEnd: {
             type: Boolean
         },
-        ackRegret:{
+        ackRegret: {
             type: Boolean
         }
     }],
-    bystanders:[{
+    bystanders: [{
         type: String
     }],
-    currentBoardSignedMap:{
+    currentBoardSignedMap: {
         type: String
+    }
+})
+
+const MessageSchema = mongoose.Schema({
+    room_id: {
+        type: String
+    },
+    username:{
+        type: String
+    },
+    message: {
+        type: String
+    },
+    sentTime: {
+        type: Date
     }
 })
 
 const User = mongoose.model('User', UserSchema)
 const Game = mongoose.model('Game', GameSchema)
 const Room = mongoose.model('Room', RoomSchema)
-module.exports = {User, Game, Room}
+const Message = mongoose.model('Message', MessageSchema)
+module.exports = {User, Game, Room, Message}
