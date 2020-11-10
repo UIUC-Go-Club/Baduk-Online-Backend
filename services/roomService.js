@@ -53,6 +53,11 @@ module.exports = function (socket, io) {
             for (let player of room.players) {
                 if (player.username === data.username) {
                     socket.join(data.room_id)
+                    socket.emit('info', {
+                        fieldName: 'username',
+                        username: data.username,
+                        description: 'current username'
+                    })
                     socket.emit('game rejoin', JSON.stringify(room))
                     return
                 }
