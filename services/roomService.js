@@ -94,11 +94,14 @@ module.exports = function (socket, io) {
                 room.players[0].color = first_color
                 room.players[1].color = second_color
                 room.currentTurn = first_color === 'black' ? 0 : 1
+                let newBoard = createBoard()
+                room.currentBoardSignedMap = newBoard.signMap
                 await room.save()
-                io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
-                boards_dict[room.room_id] = createBoard()
-                // record past moves
+
+                boards_dict[room.room_id] = newBoard
                 boards_past_dict[room.room_id] = [boards_dict[room.room_id]]
+
+                io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
             }
         } catch (error) {
             console.log(error)
@@ -113,12 +116,14 @@ module.exports = function (socket, io) {
 
         let room = await Room.findOne({room_id: data.room_id})
         room.currentTurn = reverseTurn(room.currentTurn)
+        let newBoard = boards_dict[room_id].makeMove(sign, vertex)
+        room.currentBoardSignedMap = newBoard.signMap
         room.save()
         console.log(sign, vertex)
-        let newBoard = boards_dict[room_id].makeMove(sign, vertex)
+
         boards_past_dict[room_id] = boards_dict[room_id]
         boards_dict[room_id] = newBoard
-        io.in(room_id).emit('move', JSON.stringify(newBoard.signMap))
+        io.in(room_id).emit('move', JSON.stringify(room))
     })
 
     socket.on("resign", async (data) => {
@@ -242,9 +247,13 @@ module.exports = function (socket, io) {
                 }
 
                 let newBoard = last(boards_past_dict[data.room_id])
+                room.currentTurn = room.regretInitiator
+                room.currentBoardSignedMap = newBoard.signMap
+                await room.save()
+
                 boards_dict[room_id] = newBoard
                 boards_past_dict[room_id] = boards_dict[room_id]
-                io.in(room_id).emit('regret result', JSON.stringify(newBoard.signMap))
+                io.in(room_id).emit('regret result', JSON.stringify(room))
                 // io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
             }
         } else {
@@ -258,7 +267,6 @@ module.exports = function (socket, io) {
             await room.save()
             io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
         }
-
 
         // io.sockets.in(data.room_id).emit('game ended init', JSON.stringify(room))
     })

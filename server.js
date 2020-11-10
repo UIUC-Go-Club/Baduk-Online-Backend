@@ -23,7 +23,8 @@ var io = require('socket.io')(http)
 var mongoose = require('mongoose')
 mongoose.Promise = Promise
 
-var dbUrl = 'mongodb://localhost:27017/baduk_online'
+var dbUrl = require('./env')
+// var dbUrl = 'mongodb://localhost:27017/baduk_online'
 // var dbUrl = 'mongodb+srv://user:user@cluster0.4o6w5.mongodb.net/messages?retryWrites=true&w=majority'
 
 var Message = mongoose.model('Message', {

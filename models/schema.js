@@ -90,7 +90,7 @@ const RoomSchema = mongoose.Schema({
     bystanders:[{
         type: String
     }],
-    CurrentBoardSignedMap:{
+    currentBoardSignedMap:{
         type: String
     }
 })
