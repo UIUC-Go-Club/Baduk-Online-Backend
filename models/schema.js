@@ -52,6 +52,9 @@ const RoomSchema = mongoose.Schema({
     winner: {
         type: Number
     },
+    gameStarted:{
+        type:Boolean
+    },
     gameFinished:{
         type: Boolean
     },

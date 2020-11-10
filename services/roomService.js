@@ -95,7 +95,7 @@ module.exports = function (socket, io) {
                 room.players[1].color = second_color
                 room.currentTurn = first_color === 'black' ? 0 : 1
                 let newBoard = createBoard()
-                room.currentBoardSignedMap = newBoard.signMap
+                room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
                 await room.save()
 
                 boards_dict[room.room_id] = newBoard
@@ -117,7 +117,7 @@ module.exports = function (socket, io) {
         let room = await Room.findOne({room_id: data.room_id})
         room.currentTurn = reverseTurn(room.currentTurn)
         let newBoard = boards_dict[room_id].makeMove(sign, vertex)
-        room.currentBoardSignedMap = newBoard.signMap
+        room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
         room.save()
         console.log(sign, vertex)
 
@@ -248,7 +248,8 @@ module.exports = function (socket, io) {
 
                 let newBoard = last(boards_past_dict[data.room_id])
                 room.currentTurn = room.regretInitiator
-                room.currentBoardSignedMap = newBoard.signMap
+                room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
+                room.gameStarted = true
                 await room.save()
 
                 boards_dict[room_id] = newBoard
