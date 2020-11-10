@@ -53,7 +53,7 @@ module.exports = function (socket, io) {
             for (let player of room.players) {
                 if (player.username === data.username) {
                     socket.join(data.room_id)
-                    socket.emit('game start', JSON.stringify(room))
+                    socket.emit('game rejoin', JSON.stringify(room))
                     return
                 }
             }
