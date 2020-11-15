@@ -13,7 +13,7 @@ async function saveModel(data, Model) {
 
 
 // room api to create a specific room with information
-router.post('/:room_id', async function (req, res) {
+router.post('/room/:room_id', async function (req, res) {
     try {
         let room_id = req.params.room_id
         if (room_id == null) {

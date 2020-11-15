@@ -13,6 +13,9 @@ function reverseTurn(number) {
     }
 }
 
+/**
+ * Check check condition of an array
+ */
 function checkConditionOnAll(array, field, expected) {
     for (let i = 0; i < array.length; i++) {
         if (array[i][field] !== expected) {
@@ -22,6 +25,9 @@ function checkConditionOnAll(array, field, expected) {
     return true
 }
 
+/**
+ * set all corresponding field to false
+ */
 async function resetAckInRoom(room, fieldName) {
     for (let i = 0; i < room.players.length; i++) {
         room.players[i][fieldName] = false
@@ -29,6 +35,9 @@ async function resetAckInRoom(room, fieldName) {
     await room.save()
 }
 
+/**
+ * set corresponding user field to true
+ */
 async function setRoomUserAck(room, username, fieldName) {
     for (let i = 0; i < room.players.length; i++) {
         if (room.players[i].username === username) {
@@ -38,6 +47,9 @@ async function setRoomUserAck(room, username, fieldName) {
     await room.save()
 }
 
+/**
+ * save board information in database
+ */
 async function saveBoardInDB(room, lastMove, newBoard) {
     room.lastMove = lastMove
     room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
@@ -45,6 +57,9 @@ async function saveBoardInDB(room, lastMove, newBoard) {
     await room.save()
 }
 
+/**
+ * save board information in memory
+ */
 function saveBoardInCache(room_id, lastMove, newBoard) {
     boards_past_dict[room_id].push(newBoard)
     boards_dict[room_id] = newBoard
@@ -74,7 +89,12 @@ function last(array) {
     return array[array.length - 1];
 }
 
-
+/**
+ * Create a new game record object in database
+ * copy useful states from room to game record and save
+ * @param room
+ * @returns {Promise<void>}
+ */
 async function saveFinishedGame(room) {
     try {
         let newGameRecord = new GameRecord()
@@ -107,6 +127,15 @@ async function saveFinishedGame(room) {
     }
 }
 
+/**
+ * set player color
+ * set gameStarted to true
+ * init board
+ * add game tree and board to memory board dict
+ * @param room
+ * @param io
+ * @returns {Promise<void>}
+ */
 async function startAGame(room, io) {
     let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
     let second_color = first_color === 'white' ? 'black' : 'white'
