@@ -123,9 +123,10 @@ async function startAGame(room, io) {
     // save to active game
     await Promise.all(
         room.players.map(async player => {
-            let user = await User.findOne({username: player.username})
-            user.active_games.push(room._id)
-            await user.save()
+            await User.update(
+                {username: player.username},
+                {$push: {active_games: room._id}}
+            )
         })
     )
 
@@ -138,7 +139,7 @@ async function startAGame(room, io) {
 async function joinSocketRoom(socket, roomName, username) {
     socket.join(roomName)
     socket.gameRoomName = roomName
-    socket.user = await User.findOne({username: username})
+    socket.user = await User.findOne({username: username,}, '_id name')
 }
 
 module.exports = function (socket, io) {
@@ -165,6 +166,7 @@ module.exports = function (socket, io) {
             let user = await User.findOne({username: data.username})
             if (user == null) {
                 user = new User({username: data.username})
+                await user.save()
             }
 
             let initial_time = data.initial_time != null ? data.initial_time : 600
@@ -286,7 +288,6 @@ module.exports = function (socket, io) {
         }
         io.sockets.in(data.room_id).emit('game start result', JSON.stringify(room))
     })
-
 
     socket.on("move", async (data) => {
         let room_id = data.room_id
@@ -447,11 +448,7 @@ module.exports = function (socket, io) {
             let playerIndex = findPlayerIndex(room, socket.user.username)
             if (playerIndex !== -1) {
                 room.players[playerIndex].active = false
-                io.sockets.in(data.room_id).emit('player leave', {
-                    fieldName: 'username',
-                    username: socket.user.username,
-                    description: 'a player disconnects'
-                })
+                io.sockets.in(data.room_id).emit('player leave', JSON.stringify(room))
             } else {
                 room.bystanders.pull({_id: socket.user._id})
                 await room.save()

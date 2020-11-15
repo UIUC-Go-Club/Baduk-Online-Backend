@@ -24,6 +24,7 @@
     "express": "^4.15.5",
     "express-session": "^1.17.1",
     "jade": "^1.11.0",
+    "jsonwebtoken": "^8.5.1",
     "mongodb": "^3.6.3",
     "mongoose": "^5.10.13",
     "socket.io": "^2.0.3"

@@ -9,13 +9,4 @@ router.get('/room/:room_id', async function (req, res) {
     res.send(gameRecords)
 })
 
-// router.get('/user/:username', async function (req, res) {
-//     let username = req.params.username
-//     let gameRecords = await GameRecord.find(
-//         {players:
-//                 {$elemMatch: {username:username}}
-//         })
-//     res.send(gameRecords)
-// })
-
 module.exports = router;
