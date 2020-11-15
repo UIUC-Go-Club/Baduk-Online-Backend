@@ -74,23 +74,25 @@ function last(array) {
     return array[array.length - 1];
 }
 
+
 async function saveFinishedGame(room) {
     try {
         let newGameRecord = new GameRecord()
         newGameRecord.room_id = room.room_id
         newGameRecord.winner = room.winner
         newGameRecord.players = []
-        for (player of room.players) {
+        for (const player of room.players) {
             newGameRecord.players.push({
                 username: player.username,
                 color: player.color,
-                resigned: player.resigned
+                resigned: player.resigned,
+                timeout: player.timeout
             })
         }
         newGameRecord.scoreResult = room.scoreResult
         newGameRecord.gameTree = JSON.stringify(game_tree_dict[room.room_id])
         await newGameRecord.save()
-        for (player of room.players) {
+        for (const player of room.players) {
             let user = await User.findOne({username: player.username})
             user.past_games.push(newGameRecord._id)
             user.active_games.pull(room._id)
@@ -136,8 +138,7 @@ async function startAGame(room, io) {
 async function joinSocketRoom(socket, roomName, username) {
     socket.join(roomName)
     socket.gameRoomName = roomName
-    let user = await User.findOne({username: username})
-    socket.user = user;
+    socket.user = await User.findOne({username: username})
 }
 
 module.exports = function (socket, io) {
@@ -174,6 +175,8 @@ module.exports = function (socket, io) {
             if (room == null) {
                 room = new Room({
                     room_id: data.room_id,
+                    countdown: countdown,
+                    time_out_chance: time_out_chance,
                     gameFinished: false,
                     gameStarted: false,
                     players: [],
@@ -216,7 +219,8 @@ module.exports = function (socket, io) {
                 username: data.username,
                 color: undefined,
                 initial_time: initial_time,
-                countdown: countdown,
+                reservedTimeLeft: initial_time,
+                countdownLeft: countdown,
                 time_out_chance: time_out_chance,
                 ackGameEnd: false,
                 active: true,
@@ -288,8 +292,10 @@ module.exports = function (socket, io) {
         let room_id = data.room_id
         let sign = data.sign
         let vertex = data.vertex
-
         let room = await Room.findOne({room_id: data.room_id})
+        let lastPlayer = room.players[room.currentTurn]
+        lastPlayer.reservedTimeLeft = data.reservedTimeLeft
+        lastPlayer.countdownLeft = data.countdownLeft
         room.currentTurn = reverseTurn(room.currentTurn)
         let newBoard = boards_dict[room_id].makeMove(sign, vertex)
         let newMove = {sign: sign, vertex: vertex}
@@ -306,6 +312,17 @@ module.exports = function (socket, io) {
         room.winner = data.username === room.players[0].username ? 1 : 0
         let loser = room.winner === 0 ? 1 : 0
         room.players[loser].resigned = true
+        room.gameFinished = true
+        await saveFinishedGame(room)
+        io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
+    })
+
+    socket.on("timeout", async (data) => {
+        console.log("time out is entered")
+        let room = await Room.findOne({room_id: data.room_id})
+        room.winner = data.username === room.players[0].username ? 1 : 0
+        let loser = room.winner === 0 ? 1 : 0
+        room.players[loser].timeout = true
         room.gameFinished = true
         await saveFinishedGame(room)
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
@@ -425,7 +442,7 @@ module.exports = function (socket, io) {
         console.log("disconnect is entered")
         console.log("rooms", socket.rooms)
         console.log("game room", socket.gameRoomName)
-        if(socket.user != null){
+        if (socket.user != null) {
             let room = await Room.findOne({room_id: socket.gameRoomName})
             let playerIndex = findPlayerIndex(room, socket.user.username)
             if (playerIndex !== -1) {

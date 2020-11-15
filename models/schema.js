@@ -40,6 +40,9 @@ const GameRecordSchema = mongoose.Schema({
         },
         resigned: {
             type: Boolean
+        },
+        timeout:{
+            type: Boolean
         }
     }],
     winner: {
@@ -78,8 +81,14 @@ const RoomSchema = mongoose.Schema({
         },
         vertex: [{type: Number}]
     },
-    lastMakeMoveTime: {
-        type: Date
+    lastMakeMoveTimeStamp: {
+        type: Number
+    },
+    reservedTime:{
+        type: Number
+    },
+    countDown:{
+        type:Number
     },
     scoreResult: {
         area: [{type: Number}],
@@ -107,10 +116,10 @@ const RoomSchema = mongoose.Schema({
         initial_time: {
             type: Number
         },
-        countdown: {
+        reservedTimeLeft:{
             type: Number
         },
-        time_out_chance: {
+        countdownLeft: {
             type: Number
         },
         ackGameEnd: {
@@ -124,6 +133,9 @@ const RoomSchema = mongoose.Schema({
         },
         resigned:{
             type: Boolean
+        },
+        timeout:{
+            type:Boolean
         }
     }],
     bystanders: [{
@@ -152,6 +164,7 @@ const MessageSchema = mongoose.Schema({
         type: Date
     }
 })
+
 
 const User = mongoose.model('User', UserSchema)
 const GameRecord = mongoose.model('GameRecord', GameRecordSchema)
