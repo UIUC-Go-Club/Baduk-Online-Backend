@@ -58,6 +58,12 @@ const RoomSchema = mongoose.Schema({
     gameFinished: {
         type: Boolean
     },
+    lastMove: {
+        type: String
+    },
+    lastMakeMoveTime: {
+        type: Date
+    },
     scoreResult: {
         area: [{type: Number}],
         territory: [{type: Number}],
@@ -87,6 +93,9 @@ const RoomSchema = mongoose.Schema({
             type: Boolean
         },
         ackRegret: {
+            type: Boolean
+        },
+        ackGameStart: {
             type: Boolean
         }
     }],
