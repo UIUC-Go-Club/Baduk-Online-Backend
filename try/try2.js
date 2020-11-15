@@ -1,1 +1,0 @@
-const what = require('./try')()

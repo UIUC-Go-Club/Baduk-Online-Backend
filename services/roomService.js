@@ -1,7 +1,6 @@
 const {Room, GameRecord, User} = require('../models/schema')
 const createBoard = require('../models/board')
 const {calcScoreHeuristic} = require('../utils/helpers')
-const Board = require('@sabaki/go-board')
 let boards_dict = {}
 let boards_past_dict = {}
 let game_tree_dict = {}
@@ -250,7 +249,7 @@ module.exports = function (socket, io) {
         let newMove = {sign: sign, vertex: vertex}
 
         await saveBoardInDB(room, newMove, newBoard)
-        saveBoardInCache(room, newMove, newBoard)
+        saveBoardInCache(room.room_id, newMove, newBoard)
 
         io.in(room_id).emit('move', JSON.stringify(room))
     })
@@ -265,14 +264,22 @@ module.exports = function (socket, io) {
     })
 
     socket.on("calc score", async (data) => {
-        console.log("calc score is called")
-        let room = await Room.findOne({room_id: data.room_id})
-        let scoreResult = await calcScoreHeuristic(JSON.parse(room.currentBoardJson))
-        room.scoreResult = scoreResult
-        room.save()
-        console.log(JSON.stringify(scoreResult))
-        // io.sockets.in(data.room_id).emit('calc score', JSON.stringify(scoreResult))
-        socket.emit('calc score', JSON.stringify(scoreResult))
+        try{
+            console.log("calc score is called")
+            let room = await Room.findOne({room_id: data.room_id})
+            let scoreResult = await calcScoreHeuristic(boards_dict[data.room_id])
+            if (scoreResult == null){
+                throw 'invalid score result'
+            }
+            room.scoreResult = scoreResult
+            room.save()
+            console.log(JSON.stringify(scoreResult))
+            // io.sockets.in(data.room_id).emit('calc score', JSON.stringify(scoreResult))
+            socket.emit('calc score', JSON.stringify(scoreResult))
+        }
+        catch (error){
+            console.log(error)
+        }
     })
 
 
@@ -308,6 +315,8 @@ module.exports = function (socket, io) {
         } else {
             console.log("somebody refuse to end")
             let room = await Room.findOne({room_id: data.room_id})
+            room.gameFinished = false
+
             await resetAckInRoom(room, "ackGameEnd")
             io.sockets.in(data.room_id).emit('game end result', JSON.stringify(room))
         }
@@ -344,9 +353,10 @@ module.exports = function (socket, io) {
                     while(movesToPop > 0 && boards_past_dict[room_id].length > 1){
                         boards_past_dict[room_id].pop()
                         game_tree_dict[room_id].pop()
+                        movesToPop -= 1
                     }
-
-                    await saveBoardInDB(room, last(boards_past_dict[room_id]), last(game_tree_dict[room_id]))
+                    room.currentTurn = room.regretInitiator
+                    await saveBoardInDB(room, last(game_tree_dict[room_id]), last(boards_past_dict[room_id]))
 
                     boards_dict[room_id] = last(boards_past_dict[room_id])
 

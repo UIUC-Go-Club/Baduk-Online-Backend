@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const {User} = require('../models/schema')
 
+
 router.get('/:username', async function (req, res) {
     let username = req.params.username
     let user = await User.findOne({username: username})
