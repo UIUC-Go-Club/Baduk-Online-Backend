@@ -86,6 +86,9 @@ const RoomSchema = mongoose.Schema({
     countDown:{
         type:Number
     },
+    countDownTime:{
+        type:Number
+    },
     scoreResult: {
         area: [{type: Number}],
         territory: [{type: Number}],

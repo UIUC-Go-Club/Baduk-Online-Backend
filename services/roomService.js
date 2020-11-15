@@ -137,32 +137,44 @@ async function saveFinishedGame(room) {
  * @returns {Promise<void>}
  */
 async function startAGame(room, io) {
-    let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
-    let second_color = first_color === 'white' ? 'black' : 'white'
-    room.players[0].color = first_color
-    room.players[1].color = second_color
-    room.currentTurn = first_color === 'black' ? 0 : 1
-    let newBoard = createBoard()
-    room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
-    room.currentBoardJson = JSON.stringify(newBoard)
-    room.lastMove = undefined
-    room.gameStarted = true
-    await room.save()
+    try{
+        let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
+        let second_color = first_color === 'white' ? 'black' : 'white'
+        room.players[0].color = first_color
+        room.players[1].color = second_color
+        room.currentTurn = first_color === 'black' ? 0 : 1
 
-    // save to active game
-    await Promise.all(
-        room.players.map(async player => {
-            await User.update(
-                {username: player.username},
-                {$push: {active_games: room._id}}
-            )
-        })
-    )
+        // set time
+        room.players[0].reservedTimeLeft = room.reservedTime
+        room.players[0].countdownLeft = room.countdown
+        room.players[1].reservedTimeLeft = room.reservedTime
+        room.players[1].countdownLeft = room.countdown
 
-    boards_dict[room.room_id] = newBoard
-    boards_past_dict[room.room_id] = [newBoard]
-    game_tree_dict[room.room_id] = []
-    io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
+        let newBoard = createBoard()
+        room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
+        room.currentBoardJson = JSON.stringify(newBoard)
+        room.lastMove = undefined
+        room.gameStarted = true
+        await room.save()
+
+        // save to active game
+        await Promise.all(
+            room.players.map(async player => {
+                await User.update(
+                    {username: player.username},
+                    {$push: {active_games: room._id}}
+                )
+            })
+        )
+
+        boards_dict[room.room_id] = newBoard
+        boards_past_dict[room.room_id] = [newBoard]
+        game_tree_dict[room.room_id] = []
+        io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
+    }
+    catch (error){
+        console.log(error)
+    }
 }
 
 async function joinSocketRoom(socket, roomName, username) {
@@ -198,16 +210,17 @@ module.exports = function (socket, io) {
                 await user.save()
             }
 
-            let initial_time = data.initial_time != null ? data.initial_time : 600
+            let reservedTime = data.reservedTime != null ? data.reservedTime : 600
             let countdown = data.countdown != null ? data.countdown : 30
-            let time_out_chance = data.time_out_chance != null ? data.time_out_chance : 3
+            let countDownTime = data.countDownTime != null ? data.countDownTime : 3
             let room = await Room.findOne({room_id: data.room_id})
 
             if (room == null) {
                 room = new Room({
                     room_id: data.room_id,
+                    reservedTime: reservedTime,
                     countdown: countdown,
-                    time_out_chance: time_out_chance,
+                    countDownTime: countDownTime,
                     gameFinished: false,
                     gameStarted: false,
                     players: [],
@@ -249,10 +262,6 @@ module.exports = function (socket, io) {
                 userProfile: socket.user._id,
                 username: data.username,
                 color: undefined,
-                initial_time: initial_time,
-                reservedTimeLeft: initial_time,
-                countdownLeft: countdown,
-                time_out_chance: time_out_chance,
                 ackGameEnd: false,
                 active: true,
             })
