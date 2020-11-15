@@ -17,7 +17,10 @@ router.post('/:username', async function (req, res) {
     try {
         let username = req.params.username
         if (username == null) {
-            res.sendStatus(400)
+            res.status(400).send('required field missing')
+        }
+        if(await User.findOne({username:username}) != null){
+            res.status(400).send('user already existed')
         }
 
         let newUser = new User(req.body)
