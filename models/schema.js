@@ -17,27 +17,38 @@ const UserSchema = mongoose.Schema({
     rank: {
         type: String
     },
-    past_games: [{type: String}],
-    active_games: [{type: String}]
+    past_games: [{
+        ref: 'GameRecord',
+        type: mongoose.Schema.Types.ObjectId
+    }],
+    active_games: [{
+        ref: 'Room',
+        type: mongoose.Schema.Types.ObjectId
+    }]
 })
 
-const GameSchema = mongoose.Schema({
-    game_id: {
+const GameRecordSchema = mongoose.Schema({
+    room_id: {
         type: String
     },
-    white: {
-        type: String
-    },
-    black: {
-        type: String
-    },
+    players: [{
+        username: {
+            type: String
+        },
+        color: { // black or white or undefined
+            type: String
+        },
+    }],
     winner: {
-        type: String
+        type: Number
     },
-    sgf: {
-        type: String
+    scoreResult: {
+        area: [{type: Number}],
+        territory: [{type: Number}],
+        areaScore: {type: Number},
+        territoryScore: {type: Number},
     },
-    board: {
+    gameTree: {
         type: String
     }
 })
@@ -59,7 +70,10 @@ const RoomSchema = mongoose.Schema({
         type: Boolean
     },
     lastMove: {
-        type: String
+        sign: {
+            type: Number
+        },
+        vertex: [{type: Number}]
     },
     lastMakeMoveTime: {
         type: Date
@@ -79,6 +93,9 @@ const RoomSchema = mongoose.Schema({
         },
         color: { // black or white or undefined
             type: String
+        },
+        active: {
+            type:Boolean
         },
         initial_time: {
             type: Number
@@ -104,14 +121,17 @@ const RoomSchema = mongoose.Schema({
     }],
     currentBoardSignedMap: {
         type: String
-    }
+    },
+    currentBoardJson: {
+        type: String
+    },
 })
 
 const MessageSchema = mongoose.Schema({
     room_id: {
         type: String
     },
-    username:{
+    username: {
         type: String
     },
     message: {
@@ -123,7 +143,7 @@ const MessageSchema = mongoose.Schema({
 })
 
 const User = mongoose.model('User', UserSchema)
-const Game = mongoose.model('Game', GameSchema)
+const GameRecord = mongoose.model('Game', GameRecordSchema)
 const Room = mongoose.model('Room', RoomSchema)
 const Message = mongoose.model('Message', MessageSchema)
-module.exports = {User, Game, Room, Message}
+module.exports = {User, GameRecord, Room, Message}

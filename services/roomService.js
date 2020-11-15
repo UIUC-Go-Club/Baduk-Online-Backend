@@ -1,8 +1,10 @@
-const {Room} = require('../models/schema')
+const {Room, GameRecord, User} = require('../models/schema')
 const createBoard = require('../models/board')
 const {calcScoreHeuristic} = require('../utils/helpers')
+const Board = require('@sabaki/go-board')
 let boards_dict = {}
 let boards_past_dict = {}
+let game_tree_dict = {}
 
 function reverseTurn(number) {
     if (number === 0) {
@@ -37,6 +39,20 @@ async function setRoomUserAck(room, username, fieldName){
     await room.save()
 }
 
+async function saveBoardInDB(room, lastMove, newBoard){
+    room.lastMove = lastMove
+    room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
+    room.currentBoardJson = JSON.stringify(newBoard)
+    await room.save()
+}
+
+function saveBoardInCache(room_id, lastMove, newBoard){
+    boards_past_dict[room_id].push(newBoard)
+    boards_dict[room_id] = newBoard
+    game_tree_dict[room_id].push(lastMove)
+}
+
+
 function findWinner(room) {
     let winningColor = room.scoreResult.territory > 0 ? 'black' : 'white'
     for (let i = 0; i < room.players.length; i++) {
@@ -50,6 +66,31 @@ function last(array) {
     return array[array.length - 1];
 }
 
+async function saveFinishedGame(room){
+    let newGameRecord = new GameRecord()
+    newGameRecord.room_id = room.room_id
+    newGameRecord.winner = room.winner
+    newGameRecord.players = []
+    for (player of room.players){
+        newGameRecord.players.push({
+            username: player.username,
+            color: player.color
+        })
+    }
+    newGameRecord.scoreResult = room.scoreResult
+    newGameRecord.gameTree = game_tree_dict[room.room_id]
+    await newGameRecord.save()
+    for (player of room.players){
+        let user = await User.findOne({username: player.username})
+        user.past_games.push(newGameRecord._id)
+        user.active_games.pull(room._id)
+    }
+
+    delete game_tree_dict[room.room_id]
+    delete boards_past_dict[room.room_id]
+    delete boards_dict[room.room_id]
+}
+
 async function startAGame(room, io){
     let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
     let second_color = first_color === 'white' ? 'black' : 'white'
@@ -58,9 +99,20 @@ async function startAGame(room, io){
     room.currentTurn = first_color === 'black' ? 0 : 1
     let newBoard = createBoard()
     room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
+    room.currentBoardJson = JSON.stringify(newBoard)
+    room.lastMove = undefined
+    room.gameStarted = true
     await room.save()
+
+    // save to active game
+    for (player of room.players){
+        let user = await User.findOne({username: player.username})
+        user.active_games.push(room._id)
+    }
+
     boards_dict[room.room_id] = newBoard
     boards_past_dict[room.room_id] = [newBoard]
+    game_tree_dict[room.room_id] = []
     io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
 }
 
@@ -79,6 +131,11 @@ module.exports = function (socket, io) {
 
     socket.on("join_room_player", async (data) => {
         try {
+            let user = await User.findOne({username:data.username})
+            if (user == null){
+                await new User({username:data.username}).save()
+            }
+
             let initial_time = data.initial_time != null ? data.initial_time : 600
             let countdown = data.countdown != null ? data.countdown : 30
             let time_out_chance = data.time_out_chance != null ? data.time_out_chance : 3
@@ -130,9 +187,9 @@ module.exports = function (socket, io) {
             io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
 
             // start the game when we have enough players
-            // if (room.players.length === 2) {
-            //     await startAGame(room, io)
-            // }
+            if (room.players.length === 2) {
+                await startAGame(room, io)
+            }
         } catch (error) {
             console.log(error)
         } finally {
@@ -185,12 +242,11 @@ module.exports = function (socket, io) {
         let room = await Room.findOne({room_id: data.room_id})
         room.currentTurn = reverseTurn(room.currentTurn)
         let newBoard = boards_dict[room_id].makeMove(sign, vertex)
-        room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
-        await room.save()
-        console.log(sign, vertex)
+        let newMove = {sign: sign, vertex: vertex}
 
-        boards_past_dict[room_id].push(newBoard)
-        boards_dict[room_id] = newBoard
+        await saveBoardInDB(room, newMove, newBoard)
+        saveBoardInCache(room, newMove, newBoard)
+
         io.in(room_id).emit('move', JSON.stringify(room))
     })
 
@@ -205,9 +261,8 @@ module.exports = function (socket, io) {
 
     socket.on("calc score", async (data) => {
         console.log("calc score is called")
-        let room_id = data.room_id
         let room = await Room.findOne({room_id: data.room_id})
-        let scoreResult = await calcScoreHeuristic(boards_dict[room_id].clone())
+        let scoreResult = await calcScoreHeuristic(JSON.parse(room.currentBoardJson))
         room.scoreResult = scoreResult
         room.save()
         console.log(JSON.stringify(scoreResult))
@@ -242,6 +297,7 @@ module.exports = function (socket, io) {
                 let winner_index = findWinner(room)
                 room.winner = winner_index
                 await room.save()
+                await saveFinishedGame(room)
                 io.sockets.in(data.room_id).emit('game end result', JSON.stringify(room))
             }
         } else {
@@ -259,7 +315,7 @@ module.exports = function (socket, io) {
         }
 
         let room = await Room.findOne({room_id: data.room_id})
-        room.regretInitiator = data.username === data.players[0].username ? 0 : 1
+        room.regretInitiator = data.username === room.players[0].username ? 0 : 1
         await setRoomUserAck(room, data.username, "ackRegret")
         socket.broadcast.to(data.room_id).emit('regret init', JSON.stringify(room))
     });
@@ -282,15 +338,13 @@ module.exports = function (socket, io) {
                     let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
                     while(movesToPop > 0 && boards_past_dict[room_id].length > 1){
                         boards_past_dict[room_id].pop()
+                        game_tree_dict[room_id].pop()
                     }
 
-                    let newBoard = last(boards_past_dict[data.room_id])
-                    room.currentTurn = room.regretInitiator
-                    room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
-                    room.gameStarted = true
-                    await room.save()
+                    await saveBoardInDB(room, last(boards_past_dict[room_id]), last(game_tree_dict[room_id]))
 
-                    boards_dict[room_id] = newBoard
+                    boards_dict[room_id] = last(boards_past_dict[room_id])
+
                     io.in(room_id).emit('regret result', JSON.stringify(room))
                     // io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
                 }
