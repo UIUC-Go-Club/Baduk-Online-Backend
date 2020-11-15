@@ -1,6 +1,9 @@
 DELETE http://localhost:7777/room/delete/all
 
 ###
+DELETE http://localhost:7777/user/delete/all
+
+###
 POST http://localhost:7777/user/abel
 Content-Type: application/json
 

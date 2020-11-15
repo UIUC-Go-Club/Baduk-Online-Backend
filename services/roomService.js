@@ -22,14 +22,14 @@ function checkConditionOnAll(array, field, expected) {
     return true
 }
 
-async function resetAckInRoom(room, fieldName){
+async function resetAckInRoom(room, fieldName) {
     for (let i = 0; i < room.players.length; i++) {
         room.players[i][fieldName] = false
     }
     await room.save()
 }
 
-async function setRoomUserAck(room, username, fieldName){
+async function setRoomUserAck(room, username, fieldName) {
     for (let i = 0; i < room.players.length; i++) {
         if (room.players[i].username === username) {
             room.players[i][fieldName] = true
@@ -38,14 +38,14 @@ async function setRoomUserAck(room, username, fieldName){
     await room.save()
 }
 
-async function saveBoardInDB(room, lastMove, newBoard){
+async function saveBoardInDB(room, lastMove, newBoard) {
     room.lastMove = lastMove
     room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
     room.currentBoardJson = JSON.stringify(newBoard)
     await room.save()
 }
 
-function saveBoardInCache(room_id, lastMove, newBoard){
+function saveBoardInCache(room_id, lastMove, newBoard) {
     boards_past_dict[room_id].push(newBoard)
     boards_dict[room_id] = newBoard
     game_tree_dict[room_id].push(lastMove)
@@ -61,36 +61,51 @@ function findWinner(room) {
     }
 }
 
+function findPlayerIndex(room, username) {
+    for (let i = 0; i < room.players; i++) {
+        if (room.players[i].username === username) {
+            return i
+        }
+    }
+    return -1
+}
+
 function last(array) {
     return array[array.length - 1];
 }
 
-async function saveFinishedGame(room){
-    let newGameRecord = new GameRecord()
-    newGameRecord.room_id = room.room_id
-    newGameRecord.winner = room.winner
-    newGameRecord.players = []
-    for (player of room.players){
-        newGameRecord.players.push({
-            username: player.username,
-            color: player.color
-        })
-    }
-    newGameRecord.scoreResult = room.scoreResult
-    newGameRecord.gameTree = game_tree_dict[room.room_id]
-    await newGameRecord.save()
-    for (player of room.players){
-        let user = await User.findOne({username: player.username})
-        user.past_games.push(newGameRecord._id)
-        user.active_games.pull(room._id)
-    }
+async function saveFinishedGame(room) {
+    try {
+        let newGameRecord = new GameRecord()
+        newGameRecord.room_id = room.room_id
+        newGameRecord.winner = room.winner
+        newGameRecord.players = []
+        for (player of room.players) {
+            newGameRecord.players.push({
+                username: player.username,
+                color: player.color,
+                resigned: player.resigned
+            })
+        }
+        newGameRecord.scoreResult = room.scoreResult
+        newGameRecord.gameTree = JSON.stringify(game_tree_dict[room.room_id])
+        await newGameRecord.save()
+        for (player of room.players) {
+            let user = await User.findOne({username: player.username})
+            user.past_games.push(newGameRecord._id)
+            user.active_games.pull(room._id)
+            user.save()
+        }
 
-    delete game_tree_dict[room.room_id]
-    delete boards_past_dict[room.room_id]
-    delete boards_dict[room.room_id]
+        delete game_tree_dict[room.room_id]
+        delete boards_past_dict[room.room_id]
+        delete boards_dict[room.room_id]
+    } catch (error) {
+        console.log(error)
+    }
 }
 
-async function startAGame(room, io){
+async function startAGame(room, io) {
     let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
     let second_color = first_color === 'white' ? 'black' : 'white'
     room.players[0].color = first_color
@@ -104,10 +119,13 @@ async function startAGame(room, io){
     await room.save()
 
     // save to active game
-    for (player of room.players){
-        let user = await User.findOne({username: player.username})
-        user.active_games.push(room._id)
-    }
+    await Promise.all(
+        room.players.map(async player => {
+            let user = await User.findOne({username: player.username})
+            user.active_games.push(room._id)
+            await user.save()
+        })
+    )
 
     boards_dict[room.room_id] = newBoard
     boards_past_dict[room.room_id] = [newBoard]
@@ -115,24 +133,37 @@ async function startAGame(room, io){
     io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
 }
 
+async function joinSocketRoom(socket, roomName, username) {
+    socket.join(roomName)
+    socket.gameRoomName = roomName
+    let user = await User.findOne({username: username})
+    socket.user = user;
+}
+
 module.exports = function (socket, io) {
     socket.on("join_room_bystander", async (data) => {
         let room = await Room.findOne({room_id: data.room_id})
-        if (room == null){
+        if (room == null) {
             return
         }
         room.bystanders.push(data.username)
         await room.save()
-        socket.join(data.room_id)
-        io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
-        socket.emit("room info", JSON.stringify(room))
+        await joinSocketRoom(socket, data.room_id, data.username)
+        // io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
+        io.sockets.in(data.room_id).emit("room bystander change",
+            JSON.stringify(
+                await Room.findOne({room_id: data.room_id})
+                    .populate('players.userProfile', '_id username rank')
+                    .populate('bystanders', '_id username rank')
+            )
+        )
     })
 
     socket.on("join_room_player", async (data) => {
         try {
-            let user = await User.findOne({username:data.username})
-            if (user == null){
-                await new User({username:data.username}).save()
+            let user = await User.findOne({username: data.username})
+            if (user == null) {
+                user = new User({username: data.username})
             }
 
             let initial_time = data.initial_time != null ? data.initial_time : 600
@@ -151,15 +182,22 @@ module.exports = function (socket, io) {
             }
 
             // when the same user join again
-            for (let player of room.players) {
+            for (const [i, player] of room.players.entries()) {
                 if (player.username === data.username) {
-                    socket.join(data.room_id)
+                    room.players[i].active = true
+                    await room.save()
+                    await joinSocketRoom(socket, data.room_id, data.username)
                     socket.emit('info', {
                         fieldName: 'username',
                         username: data.username,
                         description: 'current username'
                     })
-                    socket.emit('game rejoin', JSON.stringify(room))
+                    socket.emit("room player change",
+                        JSON.stringify(await Room.findOne({room_id: data.room_id})
+                            .populate('players.userProfile', '_id username rank')
+                            .populate('bystanders', '_id username rank')
+                        )
+                    )
                     return
                 }
             }
@@ -171,24 +209,32 @@ module.exports = function (socket, io) {
                 return
             }
 
+
+            await joinSocketRoom(socket, data.room_id, data.username)
             room.players.push({
+                userProfile: socket.user._id,
                 username: data.username,
                 color: undefined,
                 initial_time: initial_time,
                 countdown: countdown,
                 time_out_chance: time_out_chance,
-                ackGameEnd: false
+                ackGameEnd: false,
+                active: true,
             })
-
             await room.save()
 
-            socket.join(data.room_id)
             socket.emit('info', {
                 fieldName: 'username',
                 username: data.username,
                 description: 'current username'
             })
-            io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
+
+            io.sockets.in(data.room_id).emit("room player change",
+                JSON.stringify(await Room.findOne({room_id: data.room_id})
+                    .populate('players.userProfile', '_id username rank')
+                    .populate('bystanders', '_id username rank'))
+            )
+            // io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
 
             // start the game when we have enough players
             if (room.players.length === 2) {
@@ -232,7 +278,7 @@ module.exports = function (socket, io) {
         } else {
             console.log("somebody refuse to start")
             let room = await Room.findOne({room_id: data.room_id})
-            await resetAckInRoom(room,'ackGameStart')
+            await resetAckInRoom(room, 'ackGameStart')
         }
         io.sockets.in(data.room_id).emit('game start result', JSON.stringify(room))
     })
@@ -258,17 +304,19 @@ module.exports = function (socket, io) {
         console.log("resign is entered")
         let room = await Room.findOne({room_id: data.room_id})
         room.winner = data.username === room.players[0].username ? 1 : 0
+        let loser = room.winner === 0 ? 1 : 0
+        room.players[loser].resigned = true
         room.gameFinished = true
-        room.save()
+        await saveFinishedGame(room)
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
     })
 
     socket.on("calc score", async (data) => {
-        try{
+        try {
             console.log("calc score is called")
             let room = await Room.findOne({room_id: data.room_id})
             let scoreResult = await calcScoreHeuristic(boards_dict[data.room_id])
-            if (scoreResult == null){
+            if (scoreResult == null) {
                 throw 'invalid score result'
             }
             room.scoreResult = scoreResult
@@ -276,8 +324,7 @@ module.exports = function (socket, io) {
             console.log(JSON.stringify(scoreResult))
             // io.sockets.in(data.room_id).emit('calc score', JSON.stringify(scoreResult))
             socket.emit('calc score', JSON.stringify(scoreResult))
-        }
-        catch (error){
+        } catch (error) {
             console.log(error)
         }
     })
@@ -296,13 +343,13 @@ module.exports = function (socket, io) {
 
     socket.on("game end response", async (data) => {
         console.log("game end response is entered")
-        if (data.username == null || data.room_id == null || data.answer == null) {
+        if (data.username == null || data.room_id == null || data.ackGameEnd == null) {
             return
         }
         if (data.answer === true) {
             console.log("response with true")
             let room = await Room.findOne({room_id: data.room_id})
-            await setRoomUserAck(room, data.username,"ackGameEnd")
+            await setRoomUserAck(room, data.username, "ackGameEnd")
             if (checkConditionOnAll(room.players, 'ackGameEnd', true)) {
                 console.log("game end")
                 room.gameFinished = true
@@ -335,7 +382,7 @@ module.exports = function (socket, io) {
     });
 
     socket.on("regret response", async (data) => {
-        try{
+        try {
             let room_id = data.room_id
             console.log("regret response is entered")
             if (data.username == null || data.room_id == null || data.answer == null) {
@@ -350,7 +397,7 @@ module.exports = function (socket, io) {
                     // do regret
                     // current user regret, reset 2 moves, else reset 1 move is enough
                     let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
-                    while(movesToPop > 0 && boards_past_dict[room_id].length > 1){
+                    while (movesToPop > 0 && boards_past_dict[room_id].length > 1) {
                         boards_past_dict[room_id].pop()
                         game_tree_dict[room_id].pop()
                         movesToPop -= 1
@@ -369,21 +416,40 @@ module.exports = function (socket, io) {
                 await resetAckInRoom(room, "ackRegret")
                 io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
             }
-        }
-        catch (error){
+        } catch (error) {
             console.log(error)
         }
     })
 
-    socket.on("disconnect", (data) => {
+    socket.on("disconnect", async (data) => {
         console.log("disconnect is entered")
-        socket.emit('info', {
-            fieldName: 'username',
-            username: data.username,
-            description: 'current username disconnect'
-        })
-        socket.disconnect(0);
-        console.log("disconnected");
+        console.log("rooms", socket.rooms)
+        console.log("game room", socket.gameRoomName)
+        if(socket.user != null){
+            let room = await Room.findOne({room_id: socket.gameRoomName})
+            let playerIndex = findPlayerIndex(room, socket.user.username)
+            if (playerIndex !== -1) {
+                room.players[playerIndex].active = false
+                io.sockets.in(data.room_id).emit('player leave', {
+                    fieldName: 'username',
+                    username: socket.user.username,
+                    description: 'a player disconnects'
+                })
+            } else {
+                room.bystanders.pull({_id: socket.user._id})
+                await room.save()
+                io.sockets.in(data.room_id).emit("room bystander change",
+                    JSON.stringify(
+                        await Room.findOne({room_id: data.room_id})
+                            .populate('players.userProfile', '_id username rank')
+                            .populate('bystanders', '_id username rank')
+                    )
+                )
+            }
+
+            socket.disconnect(0);
+            console.log(`${socket.user.user} leaves ${socket.gameRoomName} disconnected`);
+        }
     });
 };
 

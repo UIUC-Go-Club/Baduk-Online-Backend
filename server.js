@@ -68,6 +68,7 @@ var dbUrl = require('./env')
 
 io.on('connection', (socket) => {
     console.log('a user connected')
+
     // require('./services/chatService')(socket, io);
     require('./services/roomService')(socket, io);
     return io

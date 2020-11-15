@@ -38,6 +38,9 @@ const GameRecordSchema = mongoose.Schema({
         color: { // black or white or undefined
             type: String
         },
+        resigned: {
+            type: Boolean
+        }
     }],
     winner: {
         type: Number
@@ -51,7 +54,7 @@ const GameRecordSchema = mongoose.Schema({
     gameTree: {
         type: String
     }
-})
+}, {collection: 'game_records'})
 
 const RoomSchema = mongoose.Schema({
     room_id: {
@@ -88,6 +91,10 @@ const RoomSchema = mongoose.Schema({
         type: Number
     },
     players: [{
+        userProfile: {
+            ref: 'User',
+            type: mongoose.Schema.Types.ObjectId
+        },
         username: {
             type: String
         },
@@ -114,10 +121,14 @@ const RoomSchema = mongoose.Schema({
         },
         ackGameStart: {
             type: Boolean
+        },
+        resigned:{
+            type: Boolean
         }
     }],
     bystanders: [{
-        type: String
+        ref: 'User',
+        type: mongoose.Schema.Types.ObjectId
     }],
     currentBoardSignedMap: {
         type: String
@@ -143,7 +154,7 @@ const MessageSchema = mongoose.Schema({
 })
 
 const User = mongoose.model('User', UserSchema)
-const GameRecord = mongoose.model('Game', GameRecordSchema)
+const GameRecord = mongoose.model('GameRecord', GameRecordSchema)
 const Room = mongoose.model('Room', RoomSchema)
 const Message = mongoose.model('Message', MessageSchema)
 module.exports = {User, GameRecord, Room, Message}

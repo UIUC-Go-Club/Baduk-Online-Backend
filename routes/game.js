@@ -1,34 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const {Game} = require('../models/schema')
+const {GameRecord} = require('../models/schema')
 
-// router.get('/:room_id', function (req, res) {
-//     try {
-//         let room_id = req.params.room_id
-//         if (room_id == null) {
-//             res.sendStatus(400)
-//         }
-//         await Message.deleteOne(
-//             {room_id: room_id}, {
-//                 skip: 0, // Starting Row
-//                 sort: {
-//                     sentTime: 1 //Sort ASC
-//                 }
-//             })
-//         res.sendStatus(204)
-//     } catch (error) {
-//         res.sendStatus(500)
-//         return console.error(error)
-//     } finally {
-//         console.log(`a room deleted`)
-//     }
-// })
-
-router.post('/', function (req, res) {
-    // console.log(req.body)
-    // req.io.emit('board', req.body)
-    console.log("game is called")
-    console.log(req.io.socket.rooms)
+router.get('/room/:room_id', async function (req, res) {
+    let room_id = req.params.room_id
+    let gameRecords = await GameRecord.find(
+        {room_id: room_id})
+    res.send(gameRecords)
 })
+
+// router.get('/user/:username', async function (req, res) {
+//     let username = req.params.username
+//     let gameRecords = await GameRecord.find(
+//         {players:
+//                 {$elemMatch: {username:username}}
+//         })
+//     res.send(gameRecords)
+// })
 
 module.exports = router;
