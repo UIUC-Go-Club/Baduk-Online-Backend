@@ -272,9 +272,9 @@ module.exports = function (socket, io) {
             // io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
 
             // start the game when we have enough players
-            if (room.players.length === 2) {
-                await startAGame(room, io)
-            }
+            // if (room.players.length === 2) {
+            //     await startAGame(room, io)
+            // }
         } catch (error) {
             console.log(error)
         } finally {
