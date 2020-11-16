@@ -16,6 +16,10 @@ const UserSchema = mongoose.Schema({
     lastLoginTime: {
         type: Date
     },
+    role:{
+        type: String,   // admin, or user
+        default: 'user'
+    },
     past_games: [{
         ref: 'GameRecord',
         type: mongoose.Schema.Types.ObjectId
@@ -84,13 +88,16 @@ const RoomSchema = mongoose.Schema({
         type: Number
     },
     reservedTime: {
-        type: Number
+        type: Number,
+        default: 600
     },
     countDown: {
-        type: Number
+        type: Number,
+        default: 3
     },
     countDownTime: {
-        type: Number
+        type: Number,
+        default: 30,
     },
     scoreResult: {
         area: [{type: Number}],

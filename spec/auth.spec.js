@@ -218,6 +218,50 @@ describe('group together to run all the test cases sequentially', () => {
         done()
     })
 
+    it('authorization test 1, invalid token', async (done) => {
+        let res = await fetch(`http://localhost:${host}/api`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'bad token'
+            }
+        })
+        expect(res.ok).toEqual(false)
+        let data = await res.json()
+        expect(data.error).toBeDefined()
+        done()
+    })
+
+    it('authorization test 2, valid token', async (done) => {
+        let res = await fetch(`http://localhost:${host}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': 'bad token'
+            },
+            body: JSON.stringify({
+                "username": testUsername,
+                "password": testPassword,
+            })
+        })
+        expect(res.ok).toBe(true)
+        let data = await res.json()
+        expect(data.jwt).toBeDefined()
+        let token = data.jwt
+
+        res = await fetch(`http://localhost:${host}/api`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `bearer ${token}`
+            }
+        })
+        expect(res.ok).toEqual(true)
+        done()
+    })
 
 })
 
