@@ -1,4 +1,5 @@
 var request = require('request')
+const fetch = require('node-fetch');
 host = 7777
 testUsername = 'testUser'
 testRoomname = 'roomTest'
@@ -9,24 +10,24 @@ describe('calc', () => {
     })
 })
 
-describe('post user info', () => {
-    it('should return 200 Ok', (done) => {
-        request.post({
-            url: `http://localhost:${host}/user/${testUsername}`,
-            json: true,
-            body: {
-                "username": testUsername,
-                "email": `${testUsername}@something.com`,
-                "password": "password",
-                "rank": "3D"
-            }
-        }, (err, res) => {
-            expect(res.statusCode).toEqual(201)
-            // console.log(res.statusCode)
-            done()
-        })
-    })
-})
+// describe('post user info', () => {
+//     it('should return 200 Ok', (done) => {
+//         request.post({
+//             url: `http://localhost:${host}/user/${testUsername}`,
+//             json: true,
+//             body: {
+//                 "username": testUsername,
+//                 "email": `${testUsername}@something.com`,
+//                 "password": "password",
+//                 "rank": "3D"
+//             }
+//         }, (err, res) => {
+//             expect(res.statusCode).toEqual(201)
+//             // console.log(res.statusCode)
+//             done()
+//         })
+//     })
+// })
 
 describe('get user info', () => {
     it('should return 200 Ok', (done) => {
@@ -101,3 +102,34 @@ describe('delete room info', () => {
     })
 })
 
+describe('get room message info', () => {
+    it('should return a list of messages Ok', async (done) => {
+        let res = await fetch(`http://localhost:${host}/message/room/${testRoomname}`, {
+            method: 'POST',
+            headers: {
+                Authorization: `bearer`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                "room_id": testRoomname,
+                "username": testUsername,
+                "message": 'hello',
+                "sentTime": new Date()
+            })
+        })
+
+        expect(res.ok).toBe(true)
+
+         res = await fetch(`http://localhost:${host}/message/room/${testRoomname}`, {
+            method: 'GET',
+            headers: {
+                Authorization: `bearer`,
+                'Content-Type': 'application/json',
+            },
+        })
+        expect(res.ok).toBe(true)
+        let messages = await res.json()
+        // console.log(messages)
+        done()
+    })
+})

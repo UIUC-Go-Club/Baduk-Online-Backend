@@ -25,21 +25,14 @@ router.post('/room/:room_id', async function (req, res) {
         res.sendStatus(500)
         return console.error(error)
     } finally {
-        console.log('new room is created')
+        console.log('new message is created')
     }
 })
 
 
 router.get('/room/:room_id', async function (req, res) {
     let room_id = req.params.room_id
-    let messages = await Message.find(
-        {room_id: room_id},
-        {
-            skip: 0, // Starting Row
-            sort: {
-                sentTime: 1 //Sort ASC
-            }
-        })
+    let messages = await Message.find({room_id: room_id}).sort({sentTime:'asc'})
     res.send(messages)
 })
 
@@ -49,13 +42,7 @@ router.delete('/room/:room_id', async function (req, res) {
         if (room_id == null) {
             res.sendStatus(400)
         }
-        await Message.deleteOne(
-            {room_id: room_id}, {
-            skip: 0, // Starting Row
-            sort: {
-                sentTime: 1 //Sort ASC
-            }
-        })
+        await Message.deleteOne({room_id: room_id})
         res.sendStatus(204)
     } catch (error) {
         res.sendStatus(500)
