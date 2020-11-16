@@ -209,6 +209,7 @@ module.exports = function (socket, io) {
                 user = new User({username: data.username})
                 await user.save()
             }
+            console.log("hahahaahahaha", data)
 
             let reservedTime = data.reservedTime != null ? data.reservedTime : 600
             let countdown = data.countdown != null ? data.countdown : 30

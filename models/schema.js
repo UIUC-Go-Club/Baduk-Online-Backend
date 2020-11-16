@@ -122,9 +122,6 @@ const RoomSchema = mongoose.Schema({
         active: {
             type: Boolean
         },
-        initial_time: {
-            type: Number
-        },
         reservedTimeLeft: {
             type: Number
         },
