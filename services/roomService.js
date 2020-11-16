@@ -77,7 +77,7 @@ function findWinner(room) {
 }
 
 function findPlayerIndex(room, username) {
-    for (let i = 0; i < room.players; i++) {
+    for (let i = 0; i < room.players.length; i++) {
         if (room.players[i].username === username) {
             return i
         }
@@ -206,7 +206,7 @@ async function startAGame(room, io) {
 async function joinSocketRoom(socket, roomName, username) {
     socket.join(roomName)
     socket.gameRoomName = roomName
-    socket.user = await User.findOne({username: username,}, '_id name')
+    socket.user = await User.findOne({username: username,})
 }
 
 module.exports = function (socket, io) {
@@ -516,34 +516,39 @@ module.exports = function (socket, io) {
     })
 
     socket.on("disconnect", async (data) => {
-        console.log("disconnect is entered")
-        console.log("rooms", socket.rooms)
-        console.log("game room", socket.gameRoomName)
-        if (socket.user != null) {
-            let room = await Room.findOne({room_id: socket.gameRoomName})
-            let playerIndex = findPlayerIndex(room, socket.user.username)
-            if (playerIndex !== -1) {
-                if (room.gameStarted){
-                    room.players[playerIndex].active = false
-                }else{
-                    room.players[playerIndex] = undefined
-                }
-                await room.save()
-                io.sockets.in(data.room_id).emit('player leave', JSON.stringify(room))
-            } else {
-                room.bystanders.pull({_id: socket.user._id})
-                await room.save()
-                io.sockets.in(data.room_id).emit("room bystander change",
-                    JSON.stringify(
-                        await Room.findOne({room_id: data.room_id})
-                            .populate('players.userProfile', '_id username rank')
-                            .populate('bystanders', '_id username rank')
+        try{
+            console.log("disconnect is entered")
+            console.log("game room", socket.gameRoomName)
+            console.log('user', socket.user, socket.user.username)
+            if (socket.user != null) {
+                let room = await Room.findOne({room_id: socket.gameRoomName})
+                let playerIndex = findPlayerIndex(room, socket.user.username)
+                if (playerIndex !== -1) {
+                    if (room.gameStarted){
+                        room.players[playerIndex].active = false
+                    }else{
+                        room.players.pull({_id: room.players[playerIndex]._id})
+                    }
+                    await room.save()
+                    io.sockets.in(data.room_id).emit('player leave', JSON.stringify(room))
+                } else {
+                    room.bystanders.pull({_id: socket.user._id})
+                    await room.save()
+                    io.sockets.in(data.room_id).emit("room bystander change",
+                        JSON.stringify(
+                            await Room.findOne({room_id: data.room_id})
+                                .populate('players.userProfile', '_id username rank')
+                                .populate('bystanders', '_id username rank')
+                        )
                     )
-                )
-            }
+                }
 
-            socket.disconnect(0);
-            console.log(`${socket.user.user} leaves ${socket.gameRoomName} disconnected`);
+                socket.disconnect(0);
+                console.log(`${socket.user.username} leaves ${socket.gameRoomName} disconnected`);
+            }
+        }
+        catch (error){
+            console.log(error)
         }
     });
 };
