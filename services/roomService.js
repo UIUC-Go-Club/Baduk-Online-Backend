@@ -1,4 +1,4 @@
-const {Room, GameRecord, User} = require('../models/schema')
+const {Room, GameRecord, User, Message} = require('../models/schema')
 const createBoard = require('../models/board')
 const {calcScoreHeuristic} = require('../utils/helpers')
 let boards_dict = {}
@@ -128,6 +128,22 @@ async function saveFinishedGame(room) {
 }
 
 /**
+ * When game has end, send game end message to the room
+ * @param room
+ * @param io
+ * @returns {Promise<void>}
+ */
+async function sendGameEndMessage(room, io){
+    let gameEndMessage = new Message()
+    gameEndMessage.room_id = room.room_id;
+    gameEndMessage.sentTime = new Date();
+    gameEndMessage.username = 'server'
+    gameEndMessage.message = `game has ended, winner is ${room.players[room.winner].username}`
+    await gameEndMessage.save()
+    io.sockets.in(room.room_id).emit('new message', JSON.stringify(gameEndMessage))
+}
+
+/**
  * set player color
  * set gameStarted to true
  * init board
@@ -171,6 +187,16 @@ async function startAGame(room, io) {
         boards_past_dict[room.room_id] = [newBoard]
         game_tree_dict[room.room_id] = []
         io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
+
+        let gameStartMessage = new Message()
+        gameStartMessage.room_id = room.room_id;
+        gameStartMessage.sentTime = new Date();
+        gameStartMessage.username = 'server'
+        gameStartMessage.message = `new game start, 
+        ${room.players[0].username} player the ${room.players[0].color}, 
+        ${room.players[1].username} player the ${room.players[1].color}`
+        await gameStartMessage.save()
+        io.sockets.in(room.room_id).emit('new message', JSON.stringify(gameStartMessage))
     }
     catch (error){
         console.log(error)
@@ -355,6 +381,7 @@ module.exports = function (socket, io) {
         room.gameFinished = true
         await saveFinishedGame(room)
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
+        await sendGameEndMessage(room, io)
     })
 
     socket.on("timeout", async (data) => {
@@ -366,6 +393,7 @@ module.exports = function (socket, io) {
         room.gameFinished = true
         await saveFinishedGame(room)
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
+        await sendGameEndMessage(room, io)
     })
 
     socket.on("calc score", async (data) => {
@@ -415,6 +443,7 @@ module.exports = function (socket, io) {
                 await room.save()
                 await saveFinishedGame(room)
                 io.sockets.in(data.room_id).emit('game end result', JSON.stringify(room))
+                await sendGameEndMessage(room, io)
             }
         } else {
             console.log("somebody refuse to end")
@@ -486,7 +515,12 @@ module.exports = function (socket, io) {
             let room = await Room.findOne({room_id: socket.gameRoomName})
             let playerIndex = findPlayerIndex(room, socket.user.username)
             if (playerIndex !== -1) {
-                room.players[playerIndex].active = false
+                if (room.gameStarted){
+                    room.players[playerIndex].active = false
+                }else{
+                    room.players[playerIndex] = undefined
+                }
+                await room.save()
                 io.sockets.in(data.room_id).emit('player leave', JSON.stringify(room))
             } else {
                 room.bystanders.pull({_id: socket.user._id})
