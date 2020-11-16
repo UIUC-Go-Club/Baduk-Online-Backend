@@ -1,3 +1,21 @@
+POST http://localhost:7777/auth/login
+Content-Type: application/json
+
+{
+  "username": "abel",
+  "password": "abel"
+}
+
+###
+POST http://localhost:7777/auth/signup
+Content-Type: application/json
+
+{
+  "username": "abel",
+  "password": "abel"
+}
+
+###
 DELETE http://localhost:7777/room/delete/all
 
 ###

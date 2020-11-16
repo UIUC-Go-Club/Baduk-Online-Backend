@@ -1,6 +1,6 @@
 var request = require('request')
 host = 7777
-testUsername = 'abel'
+testUsername = 'testUser'
 testRoomname = 'roomTest'
 
 describe('calc', () => {
@@ -15,8 +15,8 @@ describe('post user info', () => {
             url: `http://localhost:${host}/user/${testUsername}`,
             json: true,
             body: {
-                "username": "abel",
-                "email": "abel@something.com",
+                "username": testUsername,
+                "email": `${testUsername}@something.com`,
                 "password": "password",
                 "rank": "3D"
             }

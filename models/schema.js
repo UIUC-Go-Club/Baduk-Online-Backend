@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 
 const UserSchema = mongoose.Schema({
     username: {
-        type: String
+        type: String, required: true, index: {unique: true}
     },
     email: {
         type: String
@@ -12,6 +12,9 @@ const UserSchema = mongoose.Schema({
     },
     rank: {
         type: String
+    },
+    lastLoginTime: {
+        type: Date
     },
     past_games: [{
         ref: 'GameRecord',
@@ -25,7 +28,7 @@ const UserSchema = mongoose.Schema({
 
 const GameRecordSchema = mongoose.Schema({
     room_id: {
-        type: String
+        type: String,
     },
     players: [{
         username: {
@@ -37,7 +40,7 @@ const GameRecordSchema = mongoose.Schema({
         resigned: {
             type: Boolean
         },
-        timeout:{
+        timeout: {
             type: Boolean
         }
     }],
@@ -57,7 +60,7 @@ const GameRecordSchema = mongoose.Schema({
 
 const RoomSchema = mongoose.Schema({
     room_id: {
-        type: String
+        type: String, required: true
     },
     currentTurn: {  // index 0 or 1, use room.players[index] to find current player
         type: Number
@@ -80,14 +83,14 @@ const RoomSchema = mongoose.Schema({
     lastMakeMoveTimeStamp: {
         type: Number
     },
-    reservedTime:{
+    reservedTime: {
         type: Number
     },
-    countDown:{
-        type:Number
+    countDown: {
+        type: Number
     },
-    countDownTime:{
-        type:Number
+    countDownTime: {
+        type: Number
     },
     scoreResult: {
         area: [{type: Number}],
@@ -110,12 +113,12 @@ const RoomSchema = mongoose.Schema({
             type: String
         },
         active: {
-            type:Boolean
+            type: Boolean
         },
         initial_time: {
             type: Number
         },
-        reservedTimeLeft:{
+        reservedTimeLeft: {
             type: Number
         },
         countdownLeft: {
@@ -130,11 +133,11 @@ const RoomSchema = mongoose.Schema({
         ackGameStart: {
             type: Boolean
         },
-        resigned:{
+        resigned: {
             type: Boolean
         },
-        timeout:{
-            type:Boolean
+        timeout: {
+            type: Boolean
         }
     }],
     bystanders: [{
@@ -151,10 +154,10 @@ const RoomSchema = mongoose.Schema({
 
 const MessageSchema = mongoose.Schema({
     room_id: {
-        type: String
+        type: String, required: true
     },
     username: {
-        type: String
+        type: String, required: true
     },
     message: {
         type: String

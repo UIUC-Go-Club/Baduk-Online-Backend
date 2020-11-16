@@ -7,7 +7,7 @@ const gameRouter = require('./game');
 const messageRouter = require('./message')
 const router = express.Router(); // 注册路由
 
-router.use('/auth', authRouter)
+router.use('/auth', authRouter);
 router.use('/user', userRouter); // 注入用户路由模块
 router.use('/room', roomRouter);
 router.use('/game', gameRouter);

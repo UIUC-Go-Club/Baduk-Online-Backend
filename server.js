@@ -20,7 +20,7 @@ var io = require('socket.io')(http)
 var mongoose = require('mongoose')
 mongoose.Promise = Promise
 
-var dbUrl = require('./env')
+const config = require('./env')
 const jwt = require("jsonwebtoken");
 
 
@@ -31,7 +31,7 @@ io.on('connection', (socket) => {
     return io
 })
 
-mongoose.connect(dbUrl, { useNewUrlParser: true }, (err) => {
+mongoose.connect(config.mongoUrl, { useNewUrlParser: true }, (err) => {
     console.log('mongo db connection', err)
 })
 
