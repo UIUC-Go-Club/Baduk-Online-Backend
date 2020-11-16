@@ -34,7 +34,7 @@ describe('group together to run all the test cases sequentially', () => {
             expect(res.statusCode).toEqual(400)
             // console.log(res.body)
             done()
-        })
+        });
 
         // lack of password
         request.post({
