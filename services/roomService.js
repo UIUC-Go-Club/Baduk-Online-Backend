@@ -193,8 +193,8 @@ async function startAGame(room, io) {
         gameStartMessage.sentTime = new Date();
         gameStartMessage.username = 'server'
         gameStartMessage.message = `new game start, 
-        ${room.players[0].username} player the ${room.players[0].color}, 
-        ${room.players[1].username} player the ${room.players[1].color}`
+        ${room.players[0].username} plays the ${room.players[0].color}, 
+        ${room.players[1].username} plays the ${room.players[1].color}`
         await gameStartMessage.save()
         io.sockets.in(room.room_id).emit('new message', JSON.stringify(gameStartMessage))
     }
@@ -211,11 +211,19 @@ async function joinSocketRoom(socket, roomName, username) {
 
 module.exports = function (socket, io) {
     socket.on("join_room_bystander", async (data) => {
+        console.log("join room bystander")
         let room = await Room.findOne({room_id: data.room_id})
         if (room == null) {
             return
         }
-        room.bystanders.push(data.username)
+
+        let user = await User.findOne({username: data.username})
+        if (user == null) {
+            user = new User({username: data.username})
+            await user.save()
+        }
+
+        room.bystanders.push(user._id)
         await room.save()
         await joinSocketRoom(socket, data.room_id, data.username)
         // io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
