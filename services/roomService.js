@@ -304,6 +304,7 @@ module.exports = function (socket, io) {
                 socket.emit('debug', `join failed because there are already 2 players, jion as bystander instead`)
 
                 await joinBystander(room, user, io, socket)
+                return
             }
 
 
@@ -361,9 +362,10 @@ module.exports = function (socket, io) {
         if (data.username == null || data.room_id == null || data.answer == null) {
             return
         }
+        let room = await Room.findOne({room_id: data.room_id})
+
         if (data.answer === true) {
             console.log("response with true")
-            let room = await Room.findOne({room_id: data.room_id})
             await setRoomUserAck(room, data.username, 'ackGameStart')
             if (checkConditionOnAll(room.players, 'ackGameStart', true)) {
                 console.log("game start")
@@ -371,7 +373,6 @@ module.exports = function (socket, io) {
             }
         } else {
             console.log("somebody refuse to start")
-            let room = await Room.findOne({room_id: data.room_id})
             await resetAckInRoom(room, 'ackGameStart')
         }
         io.sockets.in(data.room_id).emit('game start result', JSON.stringify(room))
