@@ -68,7 +68,7 @@ function saveBoardInCache(room_id, lastMove, newBoard) {
 
 
 function findWinner(room) {
-    let winningColor = room.scoreResult.territory > 0 ? 'black' : 'white'
+    let winningColor = room.scoreResult.territoryScore > 0 ? 'black' : 'white'
     for (let i = 0; i < room.players.length; i++) {
         if (room.players[i].color === winningColor) {
             return i
