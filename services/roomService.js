@@ -133,7 +133,7 @@ async function saveFinishedGame(room) {
  * @param io
  * @returns {Promise<void>}
  */
-async function sendGameEndMessage(room, io){
+async function sendGameEndMessage(room, io) {
     let gameEndMessage = new Message()
     gameEndMessage.room_id = room.room_id;
     gameEndMessage.sentTime = new Date();
@@ -153,7 +153,7 @@ async function sendGameEndMessage(room, io){
  * @returns {Promise<void>}
  */
 async function startAGame(room, io) {
-    try{
+    try {
         let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
         let second_color = first_color === 'white' ? 'black' : 'white'
         room.players[0].color = first_color
@@ -197,8 +197,7 @@ async function startAGame(room, io) {
         ${room.players[1].username} plays the ${room.players[1].color}`
         await gameStartMessage.save()
         io.sockets.in(room.room_id).emit('new message', JSON.stringify(gameStartMessage))
-    }
-    catch (error){
+    } catch (error) {
         console.log(error)
     }
 }
@@ -207,6 +206,32 @@ async function joinSocketRoom(socket, roomName, username) {
     socket.join(roomName)
     socket.gameRoomName = roomName
     socket.user = await User.findOne({username: username,})
+}
+
+async function joinBystander(room, user, io, socket) {
+    room.bystanders.push(user._id)
+    await room.save()
+    await joinSocketRoom(socket, room.room_id, user.username)
+    // io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
+    io.sockets.in(room.room_id).emit("room bystander change",
+        JSON.stringify(
+            await Room.findOne({room_id: room.room_id})
+                .populate('players.userProfile', '_id username rank')
+                .populate('bystanders', '_id username rank')
+        )
+    )
+}
+
+async function leaveBystander(room, io, socket){
+    room.bystanders.pull({_id: socket.user._id})
+    await room.save()
+    io.sockets.in(room.room_id).emit("room bystander change",
+        JSON.stringify(
+            await Room.findOne({room_id: room.room_id})
+                .populate('players.userProfile', '_id username rank')
+                .populate('bystanders', '_id username rank')
+        )
+    )
 }
 
 module.exports = function (socket, io) {
@@ -222,18 +247,7 @@ module.exports = function (socket, io) {
             user = new User({username: data.username})
             await user.save()
         }
-
-        room.bystanders.push(user._id)
-        await room.save()
-        await joinSocketRoom(socket, data.room_id, data.username)
-        // io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
-        io.sockets.in(data.room_id).emit("room bystander change",
-            JSON.stringify(
-                await Room.findOne({room_id: data.room_id})
-                    .populate('players.userProfile', '_id username rank')
-                    .populate('bystanders', '_id username rank')
-            )
-        )
+        await joinBystander(room, user, io, socket)
     })
 
     socket.on("join_room_player", async (data) => {
@@ -286,9 +300,10 @@ module.exports = function (socket, io) {
 
             // forbidden to enter as a player when room is full
             if (room.players.length >= 2) {
-                console.log("join failed because there are already 2 players")
-                socket.emit('debug', `join failed because there are already 2 players`)
-                return
+                console.log("join failed because there are already 2 players, will join as bystander")
+                socket.emit('debug', `join failed because there are already 2 players, jion as bystander instead`)
+
+                await joinBystander(room, user, io, socket)
             }
 
 
@@ -400,6 +415,9 @@ module.exports = function (socket, io) {
         room.players[loser].timeout = true
         room.gameFinished = true
         await saveFinishedGame(room)
+        room.gameFinished = false
+        room.gameStarted = false
+        await room.save()
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
         await sendGameEndMessage(room, io)
     })
@@ -516,7 +534,7 @@ module.exports = function (socket, io) {
     })
 
     socket.on("disconnect", async (data) => {
-        try{
+        try {
             console.log("disconnect is entered")
             console.log("game room", socket.gameRoomName)
             console.log('user', socket.user, socket.user.username)
@@ -524,32 +542,22 @@ module.exports = function (socket, io) {
                 let room = await Room.findOne({room_id: socket.gameRoomName})
                 let playerIndex = findPlayerIndex(room, socket.user.username)
                 if (playerIndex !== -1) {
-                    if (room.gameStarted){
+                    if (room.gameStarted) {
                         room.players[playerIndex].active = false
-                    }else{
+                    } else {
                         room.players.pull({_id: room.players[playerIndex]._id})
                     }
                     await room.save()
                     io.sockets.in(data.room_id).emit('player leave', JSON.stringify(room))
                 } else {
-                    room.bystanders.pull({_id: socket.user._id})
-                    await room.save()
-                    io.sockets.in(data.room_id).emit("room bystander change",
-                        JSON.stringify(
-                            await Room.findOne({room_id: data.room_id})
-                                .populate('players.userProfile', '_id username rank')
-                                .populate('bystanders', '_id username rank')
-                        )
-                    )
+                    await leaveBystander(room, io, socket)
                 }
 
                 socket.disconnect(0);
                 console.log(`${socket.user.username} leaves ${socket.gameRoomName} disconnected`);
             }
-        }
-        catch (error){
+        } catch (error) {
             console.log(error)
         }
     });
 };
-
