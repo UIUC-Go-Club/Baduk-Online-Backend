@@ -454,7 +454,7 @@ module.exports = function (socket, io) {
 
     socket.on("game end response", async (data) => {
         console.log("game end response is entered")
-        if (data.username == null || data.room_id == null || data.ackGameEnd == null) {
+        if (data.username == null || data.room_id == null || data.answer == null) {
             return
         }
         if (data.answer === true) {
@@ -466,6 +466,7 @@ module.exports = function (socket, io) {
                 room.gameFinished = true
                 let winner_index = findWinner(room)
                 room.winner = winner_index
+                console.log(winner_index)
                 await room.save()
                 await saveFinishedGame(room)
                 io.sockets.in(data.room_id).emit('game end result', JSON.stringify(room))
