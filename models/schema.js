@@ -16,7 +16,7 @@ const UserSchema = mongoose.Schema({
     lastLoginTime: {
         type: Date
     },
-    role:{
+    role: {
         type: String,   // admin, or user
         default: 'user'
     },
@@ -78,6 +78,14 @@ const RoomSchema = mongoose.Schema({
     gameFinished: {
         type: Boolean
     },
+    pastMoves: [
+        {
+            sign: {
+                type: Number
+            },
+            vertex: [{type: Number}]
+        }
+    ],
     lastMove: {
         sign: {
             type: Number

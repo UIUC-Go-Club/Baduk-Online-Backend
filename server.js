@@ -9,7 +9,7 @@ app.set('view engine', 'jade');
 
 app.use(express.static(__dirname))
 app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.urlencoded({extended: false}))
 
 var session = require('express-session');
 var cookieParser = require('cookie-parser');
@@ -31,11 +31,16 @@ io.on('connection', (socket) => {
     return io
 })
 
-mongoose.connect(config.mongoUrl, { useNewUrlParser: true }, (err) => {
-    console.log('mongo db connection', err)
-})
+mongoose.connect(config.mongoUrl,
+    {
+        useNewUrlParser: true,
+        useCreateIndex: true,
+        useUnifiedTopology: true
+    }, (err) => {
+        console.log('mongo db connection', err)
+    })
 
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     req.io = io;
     next();
 });

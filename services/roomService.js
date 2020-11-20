@@ -2,8 +2,6 @@ const {Room, GameRecord, User, Message} = require('../models/schema')
 const createBoard = require('../models/board')
 const {calcScoreHeuristic} = require('../utils/helpers')
 let boards_dict = {}
-let boards_past_dict = {}
-let game_tree_dict = {}
 
 function reverseTurn(number) {
     if (number === 0) {
@@ -50,20 +48,9 @@ async function setRoomUserAck(room, username, fieldName) {
 /**
  * save board information in database
  */
-async function saveBoardInDB(room, lastMove, newBoard) {
-    room.lastMove = lastMove
+async function saveBoardInDB(room, newBoard) {
     room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
-    room.currentBoardJson = JSON.stringify(newBoard)
     await room.save()
-}
-
-/**
- * save board information in memory
- */
-function saveBoardInCache(room_id, lastMove, newBoard) {
-    boards_past_dict[room_id].push(newBoard)
-    boards_dict[room_id] = newBoard
-    game_tree_dict[room_id].push(lastMove)
 }
 
 
@@ -74,6 +61,11 @@ function findWinner(room) {
             return i
         }
     }
+}
+
+function timeoutCheck(room, username) {
+    let playerIndex = findPlayerIndex(room, username)
+    return room.players[i].reservedTimeLeft <= 0 && room.players[i].countdownLeft <= 0
 }
 
 function findPlayerIndex(room, username) {
@@ -87,6 +79,19 @@ function findPlayerIndex(room, username) {
 
 function last(array) {
     return array[array.length - 1];
+}
+
+/**
+ * Create the board after a list of moves
+ * @param pastMoves a list of moves
+ * @returns {GoBoard}
+ */
+function buildBoardFromMoves(pastMoves){
+    let newBoard = createBoard()
+    for (let move of pastMoves) {
+        newBoard = newBoard.makeMove(move.sign, move.vertex)
+    }
+    return newBoard
 }
 
 /**
@@ -110,7 +115,7 @@ async function saveFinishedGame(room) {
             })
         }
         newGameRecord.scoreResult = room.scoreResult
-        newGameRecord.gameTree = JSON.stringify(game_tree_dict[room.room_id])
+        newGameRecord.gameTree = JSON.stringify(room.pastMoves)
         await newGameRecord.save()
         for (const player of room.players) {
             let user = await User.findOne({username: player.username})
@@ -118,13 +123,16 @@ async function saveFinishedGame(room) {
             user.active_games.pull(room._id)
             user.save()
         }
-
-        delete game_tree_dict[room.room_id]
-        delete boards_past_dict[room.room_id]
-        delete boards_dict[room.room_id]
     } catch (error) {
         console.log(error)
     }
+}
+
+async function cleanGameCache(room) {
+    room.lastMove = undefined
+    room.pastMoves = []
+    await room.save()
+    delete boards_dict[room.room_id]
 }
 
 /**
@@ -166,9 +174,9 @@ async function startAGame(room, io) {
         room.players[1].reservedTimeLeft = room.reservedTime
         room.players[1].countdownLeft = room.countdown
 
-        let newBoard = createBoard()
-        room.currentBoardSignedMap = JSON.stringify(newBoard.signMap)
-        room.currentBoardJson = JSON.stringify(newBoard)
+        boards_dict[room.room_id] = createBoard()
+
+        room.currentBoardSignedMap = JSON.stringify(boards_dict[room.room_id].signMap)
         room.lastMove = undefined
         room.gameStarted = true
         await room.save()
@@ -176,16 +184,13 @@ async function startAGame(room, io) {
         // save to active game
         await Promise.all(
             room.players.map(async player => {
-                await User.update(
+                await User.updateOne(
                     {username: player.username},
                     {$push: {active_games: room._id}}
                 )
             })
         )
 
-        boards_dict[room.room_id] = newBoard
-        boards_past_dict[room.room_id] = [newBoard]
-        game_tree_dict[room.room_id] = []
         io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
 
         let gameStartMessage = new Message()
@@ -222,7 +227,7 @@ async function joinBystander(room, user, io, socket) {
     )
 }
 
-async function leaveBystander(room, io, socket){
+async function leaveBystander(room, io, socket) {
     room.bystanders.pull({_id: socket.user._id})
     await room.save()
     io.sockets.in(room.room_id).emit("room bystander change",
@@ -239,6 +244,7 @@ module.exports = function (socket, io) {
         console.log("join room bystander")
         let room = await Room.findOne({room_id: data.room_id})
         if (room == null) {
+            socket.emit('debug', `join failed because room does not exist`)
             return
         }
 
@@ -301,7 +307,7 @@ module.exports = function (socket, io) {
             // forbidden to enter as a player when room is full
             if (room.players.length >= 2) {
                 console.log("join failed because there are already 2 players, will join as bystander")
-                socket.emit('debug', `join failed because there are already 2 players, jion as bystander instead`)
+                socket.emit('debug', `join failed because there are already 2 players, join as bystander instead`)
 
                 await joinBystander(room, user, io, socket)
                 return
@@ -378,20 +384,34 @@ module.exports = function (socket, io) {
         io.sockets.in(data.room_id).emit('game start result', JSON.stringify(room))
     })
 
-    socket.on("move", async (data) => {
+    socket.on("move", async (data) => { // vertex will be an [-1, -1] if it's a pass
         let room_id = data.room_id
         let sign = data.sign
         let vertex = data.vertex
         let room = await Room.findOne({room_id: data.room_id})
+
+        if(sign == room.lastMove.sign){
+            socket.emit('debug', `last two moves are from the same person, forbidden`)
+            return
+        }
+
         let lastPlayer = room.players[room.currentTurn]
         lastPlayer.reservedTimeLeft = data.reservedTimeLeft
         lastPlayer.countdownLeft = data.countdownLeft
         room.currentTurn = reverseTurn(room.currentTurn)
-        let newBoard = boards_dict[room_id].makeMove(sign, vertex)
-        let newMove = {sign: sign, vertex: vertex}
 
-        await saveBoardInDB(room, newMove, newBoard)
-        saveBoardInCache(room.room_id, newMove, newBoard)
+
+        if (boards_dict[room_id] == null) { // if our current board is gone, restore the current board using past moves
+            boards_dict[room_id] = buildBoardFromMoves(room.pastMoves)
+        }
+
+        let newMove = {sign: sign, vertex: vertex}
+        boards_dict[room_id] = boards_dict[room_id].makeMove(sign, vertex)
+
+        room.lastMove = newMove
+        room.pastMoves.push(newMove)
+
+        await saveBoardInDB(room, boards_dict[room_id])
 
         io.in(room_id).emit('move', JSON.stringify(room))
     })
@@ -403,7 +423,9 @@ module.exports = function (socket, io) {
         let loser = room.winner === 0 ? 1 : 0
         room.players[loser].resigned = true
         room.gameFinished = true
+        room.gameStarted = false
         await saveFinishedGame(room)
+        await cleanGameCache(room)
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
         await sendGameEndMessage(room, io)
     })
@@ -411,14 +433,17 @@ module.exports = function (socket, io) {
     socket.on("timeout", async (data) => {
         console.log("time out is entered")
         let room = await Room.findOne({room_id: data.room_id})
+        if (!timeoutCheck(room, data.username)) { // 防止虚假timeout
+            socket.emit('debug', `This player still have reservedTimeLest or countDownLeft, should not timeout, check again`)
+            return
+        }
         room.winner = data.username === room.players[0].username ? 1 : 0
         let loser = room.winner === 0 ? 1 : 0
         room.players[loser].timeout = true
         room.gameFinished = true
-        await saveFinishedGame(room)
-        room.gameFinished = false
         room.gameStarted = false
-        await room.save()
+        await saveFinishedGame(room)
+        await cleanGameCache(room)
         io.sockets.in(data.room_id).emit('game ended', JSON.stringify(room))
         await sendGameEndMessage(room, io)
     })
@@ -461,15 +486,22 @@ module.exports = function (socket, io) {
         if (data.answer === true) {
             console.log("response with true")
             let room = await Room.findOne({room_id: data.room_id})
+            if (!room.gameStarted) {
+                console.log("error, game has not start, why would we enter here?")
+                return
+            }
+
             await setRoomUserAck(room, data.username, "ackGameEnd")
             if (checkConditionOnAll(room.players, 'ackGameEnd', true)) {
                 console.log("game end")
                 room.gameFinished = true
+                room.gameStarted = false
                 let winner_index = findWinner(room)
                 room.winner = winner_index
                 console.log(winner_index)
                 await room.save()
                 await saveFinishedGame(room)
+                await cleanGameCache(room)
                 io.sockets.in(data.room_id).emit('game end result', JSON.stringify(room))
                 await sendGameEndMessage(room, io)
             }
@@ -511,18 +543,17 @@ module.exports = function (socket, io) {
                     // do regret
                     // current user regret, reset 2 moves, else reset 1 move is enough
                     let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
-                    while (movesToPop > 0 && boards_past_dict[room_id].length > 1) {
-                        boards_past_dict[room_id].pop()
-                        game_tree_dict[room_id].pop()
+                    while (movesToPop > 0 && room.pastMoves.length > 1) {
+                        console.log(room.pastMoves.pop())
                         movesToPop -= 1
                     }
                     room.currentTurn = room.regretInitiator
-                    await saveBoardInDB(room, last(game_tree_dict[room_id]), last(boards_past_dict[room_id]))
-
-                    boards_dict[room_id] = last(boards_past_dict[room_id])
+                    room.lastMove = last(room.pastMoves)
+                    boards_dict[room_id] = buildBoardFromMoves(room.pastMoves)
+                    await saveBoardInDB(room, boards_dict[room_id])
 
                     io.in(room_id).emit('regret result', JSON.stringify(room))
-                    // io.sockets.in(data.room_id).emit('regret result', JSON.stringify(room))
+                    await resetAckInRoom(room, "ackRegret")
                 }
             } else {
                 console.log("others refuse to regret a move")
@@ -539,7 +570,7 @@ module.exports = function (socket, io) {
         try {
             console.log("disconnect is entered")
             console.log("game room", socket.gameRoomName)
-            console.log('user', socket.user, socket.user.username)
+            console.log('user', socket.user, socket.user == null? "nobody" : socket.user.username)
             if (socket.user != null) {
                 let room = await Room.findOne({room_id: socket.gameRoomName})
                 let playerIndex = findPlayerIndex(room, socket.user.username)
@@ -554,8 +585,10 @@ module.exports = function (socket, io) {
                 } else {
                     await leaveBystander(room, io, socket)
                 }
-
                 socket.disconnect(0);
+                if (emptyRoom(room)) {
+                    Room.deleteOne({_id: room._id})
+                }
                 console.log(`${socket.user.username} leaves ${socket.gameRoomName} disconnected`);
             }
         } catch (error) {
@@ -563,3 +596,7 @@ module.exports = function (socket, io) {
         }
     });
 };
+
+function emptyRoom(room) {
+    return room.players.length === 0 && room.bystanders.length === 0
+}

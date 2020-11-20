@@ -6,24 +6,29 @@ const jwt = require("jsonwebtoken");
 const config = require("../env");
 
 router.post('/login', async function (req, res) {
+    if (req.body == null) {
+        res.status(400).send('bad request, body should not be null')
+    }
+
+
+    let username = req.body.username
+    let password = req.body.password
+    if (username == null || password == null) {
+        res.status(400).send('required field missing')
+    }
+
+    let user = await User.findOne({username: username})
+    if (user == null) {
+        res.status(400).send('user does not exists')
+    }
+
     try {
-        let username = req.body.username
-        let password = req.body.password
-        if (username == null || password == null) {
-            res.status(400).send('required field missing')
-        }
-
-        let user = await User.findOne({username: username})
-        if (user == null) {
-            res.status(400).send('user does not exists')
-        }
-
         /*
          * Check if the username and hashed password is correct
          */
         let passwordHash = crypto.createHash('md5').update(password).digest('hex')
         if (req.body.username === user.username && passwordHash === user.password) {
-            await user.update({lastLoginTime:new Date()})
+            await user.updateOne({lastLoginTime: new Date()})
             res.json({
                 username: username,
                 jwt: jwt.sign({
@@ -42,27 +47,30 @@ router.post('/login', async function (req, res) {
                 }
             });
         }
-
     } catch (error) {
         res.sendStatus(500)
         return console.error(error)
-    } finally {
-        console.log('new users is saved')
     }
+
+
 });
 
 router.post('/signup', async function (req, res) {
+    if (req.body == null) {
+        res.status(400).send('bad request, body should not be null')
+    }
+
+    let username = req.body.username
+    let password = req.body.password
+    if (username == null || password == null) {
+        res.status(400).send('required field missing')
+    }
+
+    if (await User.findOne({username: username}) != null) {
+        res.status(400).send('username already existed, please login in')
+    }
+
     try {
-        let username = req.body.username
-        let password = req.body.password
-        if (username == null || password == null) {
-            res.status(400).send('required field missing')
-        }
-
-        if (await User.findOne({username: username}) != null) {
-            res.status(400).send('username already existed, please login in')
-        }
-
         // Will not save password, instead, its harsh
         let passwordHash = crypto.createHash('md5').update(password).digest('hex')
         let newUser = new User(req.body)
@@ -70,38 +78,40 @@ router.post('/signup', async function (req, res) {
         newUser.lastLoginTime = new Date()
         await newUser.save()
         console.log(`${newUser.username} saved`)
-
-
-        res.status(201).send(
-            JSON.stringify({
-                username: username,
-                info: 'user created successfully',
-                jwt: jwt.sign({
-                    id: 1,
-                }, config.JWT_SECRET, {expiresIn: 60 * 60})
-            })
-        )
     } catch (error) {
         res.sendStatus(500)
         return console.error(error)
-    } finally {
-        console.log('new users is saved')
     }
+
+    res.status(201).send(
+        JSON.stringify({
+            username: username,
+            info: 'user created successfully',
+            jwt: jwt.sign({
+                id: 1,
+            }, config.JWT_SECRET, {expiresIn: 60 * 60})
+        })
+    )
 });
 
 router.post('/reset_password', async function (req, res) {
+    if (req.body == null) {
+        res.status(400).send('bad request, body should not be null')
+    }
+
+
+    let username = req.body.username
+    let password = req.body.password
+    if (username == null || password == null) {
+        res.status(400).send('required field missing')
+    }
+
+    let user = await User.findOne({username: username})
+    if (user == null) {
+        res.status(400).send('user does not exists')
+    }
+
     try {
-        let username = req.body.username
-        let password = req.body.password
-        if (username == null || password == null) {
-            res.status(400).send('required field missing')
-        }
-
-        let user = await User.findOne({username: username})
-        if (user == null) {
-            res.status(400).send('user does not exists')
-        }
-
         // Will not save password, instead, its harsh
         let passwordHash = crypto.createHash('md5').update(password).digest('hex')
         user.password = passwordHash
@@ -110,22 +120,20 @@ router.post('/reset_password', async function (req, res) {
         await user.save()
 
         console.log(`${User.username} password reset`)
-
-        res.status(200).send(
-            JSON.stringify({
-                username: username,
-                info: 'user password reset successfully',
-                jwt: jwt.sign({
-                    id: 1,
-                }, config.JWT_SECRET, {expiresIn: 60 * 60})
-            })
-        )
     } catch (error) {
         res.sendStatus(500)
         return console.error(error)
-    } finally {
-        console.log('new users is saved')
     }
+
+    res.status(200).send(
+        JSON.stringify({
+            username: username,
+            info: 'user password reset successfully',
+            jwt: jwt.sign({
+                id: 1,
+            }, config.JWT_SECRET, {expiresIn: 60 * 60})
+        })
+    )
 });
 
 module.exports = router;

@@ -4,32 +4,34 @@ deadstones.useFetch('./node_modules/@sabaki/deadstones/wasm/deadstones_bg.wasm')
 
 /**
  * calc the score and find the winner
- * @param scoreBoard
+ * @param scoreBoardCopy
  * @param iterations number of iterations use to guess
  * @param komi
  * @param handicap
  * @returns {Promise<void>}
  */
 async function calcScoreHeuristic(scoreBoard, {iterations = 100, komi = 7.5, handicap = 0} = {}) {
-    try{
+    let scoreBoardCopy = scoreBoard.clone()
+    try {
         let result = await deadstones
-            .guess(scoreBoard.signMap, {
+            .guess(scoreBoardCopy.signMap, {
                 finished: true,
                 iterations
             })
         for (let vertex of result) {
-            let sign = scoreBoard.get(vertex)
-            if (sign === 0) continue
-            scoreBoard.setCaptures(-sign, x => x + 1)
-            scoreBoard.set(vertex, 0)
+            let sign = scoreBoardCopy.get(vertex)
+            if (sign === 0) {
+                continue
+            }
+            scoreBoardCopy.setCaptures(-sign, x => x + 1)
+            scoreBoardCopy.set(vertex, 0)
         }
-        let areaMap = influence.map(scoreBoard.signMap, {discrete: true})
+        let areaMap = influence.map(scoreBoardCopy.signMap, {discrete: true})
 
-        let r1 = getScore(scoreBoard, areaMap, {komi: komi, handicap: handicap})
+        let r1 = getScore(scoreBoardCopy, areaMap, {komi: komi, handicap: handicap})
         console.log(r1)
         return r1
-    }
-    catch (error){
+    } catch (error) {
         console.log(error)
     }
 }
