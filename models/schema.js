@@ -159,9 +159,6 @@ const RoomSchema = mongoose.Schema({
     currentBoardSignedMap: {
         type: String
     },
-    currentBoardJson: {
-        type: String
-    },
 })
 
 const MessageSchema = mongoose.Schema({
