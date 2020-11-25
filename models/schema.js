@@ -34,6 +34,18 @@ const GameRecordSchema = mongoose.Schema({
     room_id: {
         type: String,
     },
+    komi: {
+        type: Number,
+        default: 7.5
+    },
+    boardSize: {
+        type: Number,
+        default: 19
+    },
+    handicap: {
+        type: Number,
+        default: 0
+    },
     players: [{
         username: {
             type: String
@@ -78,6 +90,34 @@ const RoomSchema = mongoose.Schema({
     gameFinished: {
         type: Boolean
     },
+    komi: {
+        type: Number,
+        default: 7.5
+    },
+    boardSize: {
+        type: Number,
+        default: 19
+    },
+    handicap: {
+        type: Number,
+        default: 0
+    },
+    randomPlayerColor: {
+        type: Boolean,
+        default: true
+    },
+    reservedTime: {
+        type: Number,
+        default: 600
+    },
+    countDown: {
+        type: Number,
+        default: 3
+    },
+    countDownTime: {
+        type: Number,
+        default: 30,
+    },
     pastMoves: [
         {
             sign: {
@@ -94,18 +134,6 @@ const RoomSchema = mongoose.Schema({
     },
     lastMakeMoveTimeStamp: {
         type: Number
-    },
-    reservedTime: {
-        type: Number,
-        default: 600
-    },
-    countDown: {
-        type: Number,
-        default: 3
-    },
-    countDownTime: {
-        type: Number,
-        default: 30,
     },
     scoreResult: {
         area: [{type: Number}],

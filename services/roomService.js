@@ -86,7 +86,7 @@ function last(array) {
  * @param pastMoves a list of moves
  * @returns {GoBoard}
  */
-function buildBoardFromMoves(pastMoves){
+function buildBoardFromMoves(pastMoves) {
     let newBoard = createBoard()
     for (let move of pastMoves) {
         newBoard = newBoard.makeMove(move.sign, move.vertex)
@@ -105,6 +105,8 @@ async function saveFinishedGame(room) {
         let newGameRecord = new GameRecord()
         newGameRecord.room_id = room.room_id
         newGameRecord.winner = room.winner
+        newGameRecord.komi = room.komi
+        newGameRecord.boardSize = room.boardSize
         newGameRecord.players = []
         for (const player of room.players) {
             newGameRecord.players.push({
@@ -162,11 +164,13 @@ async function sendGameEndMessage(room, io) {
  */
 async function startAGame(room, io) {
     try {
-        let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
-        let second_color = first_color === 'white' ? 'black' : 'white'
-        room.players[0].color = first_color
-        room.players[1].color = second_color
-        room.currentTurn = first_color === 'black' ? 0 : 1
+        if (room.randomPlayerColor) {
+            let first_color = ~~(Math.random() * 2) === 0 ? 'white' : 'black'
+            let second_color = first_color === 'white' ? 'black' : 'white'
+            room.players[0].color = first_color
+            room.players[1].color = second_color
+            room.currentTurn = first_color === 'black' ? 0 : 1
+        }
 
         // set time
         room.players[0].reservedTimeLeft = room.reservedTime
@@ -174,7 +178,7 @@ async function startAGame(room, io) {
         room.players[1].reservedTimeLeft = room.reservedTime
         room.players[1].countdownLeft = room.countdown
 
-        boards_dict[room.room_id] = createBoard()
+        boards_dict[room.room_id] = createBoard({boardSize: room.boardSize, handicap: room.handicap})
 
         room.currentBoardSignedMap = JSON.stringify(boards_dict[room.room_id].signMap)
         room.lastMove = undefined
@@ -355,6 +359,36 @@ module.exports = function (socket, io) {
             }
 
             let room = await Room.findOne({room_id: data.room_id})
+            room.boardSize = data.boardSize != null ? data.boardSize : 19
+            room.handicap = data.handicap != null ? data.handicap : 0
+            room.komi = data.komi != null ? data.komi : 7.5
+            room.countdown = data.countdown != null ? data.countdown : 3
+            room.countDownTime = data.countDownTime != null ? data.countDownTime : 30
+            room.reservedTime = data.reservedTime != null ? data.reservedTime : 10 * 60
+            room.randomPlayerColor = data.randomPlayerColor != null ? data.randomPlayerColor : true
+
+            // set who plays black, who players white if we want to have fixed players
+            if (!room.randomPlayerColor) {
+                if (data[room.players[0].username] != null
+                    && data[room.players[1].username] != null
+                    && data[room.players[0].username].color != null
+                    && data[room.players[1].username].color != null
+                    && (data[room.players[0].username].color.toLowerCase() === 'black' ||
+                        data[room.players[1].username].color.toLowerCase() === 'white')
+                    && (data[room.players[0].username].color.toLowerCase() === 'black' ||
+                        data[room.players[1].username].color.toLowerCase() === 'white')
+                    && data[room.players[0].username].color.toLowerCase() !== data[room.players[1].username].color.toLowerCase()) {
+                    room.players[0].color = data[room.players[0].username].color.toLowerCase()
+                    room.players[1].color = data[room.players[1].username].color.toLowerCase()
+                    room.currentTurn = room.players[0].color === 'black' ? 0 : 1
+                } else {
+                    socket.emit('debug', `created failed, if you want do fixed color playing, your data must contains for example ${JSON.stringify({
+                        username1: {color: 'white'},
+                        username2: {color: 'black'}
+                    })}`)
+                }
+            }
+
             await setRoomUserAck(room, data.username, 'ackGameStart')
             socket.broadcast.to(data.room_id).emit('game start init', JSON.stringify(room))
         } catch (error) {
@@ -390,7 +424,7 @@ module.exports = function (socket, io) {
         let vertex = data.vertex
         let room = await Room.findOne({room_id: data.room_id})
 
-        if(sign == room.lastMove.sign){
+        if (sign == room.lastMove.sign) {
             socket.emit('debug', `last two moves are from the same person, forbidden`)
             return
         }
@@ -452,7 +486,7 @@ module.exports = function (socket, io) {
         try {
             console.log("calc score is called")
             let room = await Room.findOne({room_id: data.room_id})
-            let scoreResult = await calcScoreHeuristic(boards_dict[data.room_id])
+            let scoreResult = await calcScoreHeuristic(boards_dict[data.room_id], {komi: room.komi})
             if (scoreResult == null) {
                 throw 'invalid score result'
             }
@@ -570,7 +604,7 @@ module.exports = function (socket, io) {
         try {
             console.log("disconnect is entered")
             console.log("game room", socket.gameRoomName)
-            console.log('user', socket.user, socket.user == null? "nobody" : socket.user.username)
+            console.log('user', socket.user, socket.user == null ? "nobody" : socket.user.username)
             if (socket.user != null) {
                 let room = await Room.findOne({room_id: socket.gameRoomName})
                 let playerIndex = findPlayerIndex(room, socket.user.username)
