@@ -5,5 +5,4 @@ module.exports = {
     defaultKomi: 7.5,
     defaultBoardSize: 19,
     defaultHandicap: 0,
-
 }
