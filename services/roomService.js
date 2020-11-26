@@ -1,6 +1,7 @@
 const {Room, GameRecord, User, Message} = require('../models/schema')
 const createBoard = require('../models/board')
 const {calcScoreHeuristic} = require('../utils/helpers')
+const {defaultReservedTime, defaultCountDownTime, defaultCountDown, defaultKomi, defaultBoardSize, defaultHandicap} = require('../default')
 let boards_dict = {}
 
 function reverseTurn(number) {
@@ -269,9 +270,9 @@ module.exports = function (socket, io) {
             }
             console.log("join room player", data)
 
-            let reservedTime = data.reservedTime != null ? data.reservedTime : 600
-            let countdown = data.countdown != null ? data.countdown : 30
-            let countDownTime = data.countDownTime != null ? data.countDownTime : 3
+            let reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
+            let countdown = data.countdown != null ? data.countdown : defaultCountDown
+            let countDownTime = data.countDownTime != null ? data.countDownTime : defaultCountDownTime
             let room = await Room.findOne({room_id: data.room_id})
 
             if (room == null) {
@@ -359,12 +360,12 @@ module.exports = function (socket, io) {
             }
 
             let room = await Room.findOne({room_id: data.room_id})
-            room.boardSize = data.boardSize != null ? data.boardSize : 19
-            room.handicap = data.handicap != null ? data.handicap : 0
-            room.komi = data.komi != null ? data.komi : 7.5
-            room.countdown = data.countdown != null ? data.countdown : 3
-            room.countDownTime = data.countDownTime != null ? data.countDownTime : 30
-            room.reservedTime = data.reservedTime != null ? data.reservedTime : 10 * 60
+            room.boardSize = data.boardSize != null ? data.boardSize : defaultBoardSize
+            room.handicap = data.handicap != null ? data.handicap : defaultHandicap
+            room.komi = data.komi != null ? data.komi : defaultKomi
+            room.countdown = data.countdown != null ? data.countdown : defaultCountDown
+            room.countDownTime = data.countDownTime != null ? data.countDownTime : defaultCountDownTime
+            room.reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
             room.randomPlayerColor = data.randomPlayerColor != null ? data.randomPlayerColor : true
 
             // set who plays black, who players white if we want to have fixed players

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const {defaultReservedTime, defaultCountDownTime, defaultCountDown, defaultKomi, defaultBoardSize, defaultHandicap} = require('../default')
 
 const UserSchema = mongoose.Schema({
     username: {
@@ -36,15 +37,15 @@ const GameRecordSchema = mongoose.Schema({
     },
     komi: {
         type: Number,
-        default: 7.5
+        default: defaultKomi
     },
     boardSize: {
         type: Number,
-        default: 19
+        default: defaultBoardSize
     },
     handicap: {
         type: Number,
-        default: 0
+        default: defaultHandicap
     },
     players: [{
         username: {
@@ -92,15 +93,15 @@ const RoomSchema = mongoose.Schema({
     },
     komi: {
         type: Number,
-        default: 7.5
+        default: defaultKomi
     },
     boardSize: {
         type: Number,
-        default: 19
+        default: defaultBoardSize
     },
     handicap: {
         type: Number,
-        default: 0
+        default: defaultHandicap
     },
     randomPlayerColor: {
         type: Boolean,
@@ -108,15 +109,15 @@ const RoomSchema = mongoose.Schema({
     },
     reservedTime: {
         type: Number,
-        default: 600
+        default: defaultReservedTime // mini-seconds
     },
     countDown: {
         type: Number,
-        default: 3
+        default: defaultCountDown
     },
     countDownTime: {
         type: Number,
-        default: 30,
+        default: defaultCountDownTime, // mini-seconds
     },
     pastMoves: [
         {
