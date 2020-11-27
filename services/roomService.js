@@ -261,6 +261,62 @@ module.exports = function (socket, io) {
         await joinBystander(room, user, io, socket)
     })
 
+    socket.on("create room", async (data) => {
+        try {
+            let user = await User.findOne({username: data.username})
+            if (user == null) {
+                user = new User({username: data.username})
+                await user.save()
+            }
+            console.log("join room player", data)
+
+            let reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
+            let countdown = data.countdown != null ? data.countdown : defaultCountDown
+            let countDownTime = data.countDownTime != null ? data.countDownTime : defaultCountDownTime
+            let room = await Room.findOne({room_id: data.room_id})
+
+            if (room == null) {
+                room = new Room({
+                    room_id: data.room_id,
+                    reservedTime: reservedTime,
+                    countdown: countdown,
+                    countDownTime: countDownTime,
+                    gameFinished: false,
+                    gameStarted: false,
+                    players: [],
+                    bystanders: []
+                })
+            }else{
+                socket.emit('debug', `create failed because room already exists`)
+            }
+
+            await joinSocketRoom(socket, data.room_id, data.username)
+            room.players.push({
+                userProfile: socket.user._id,
+                username: data.username,
+                color: undefined,
+                ackGameEnd: false,
+                active: true,
+            })
+            await room.save()
+
+            socket.emit('info', {
+                fieldName: 'username',
+                username: data.username,
+                description: 'current username'
+            })
+
+            io.sockets.in(data.room_id).emit("room player change",
+                JSON.stringify(await Room.findOne({room_id: data.room_id})
+                    .populate('players.userProfile', '_id username rank')
+                    .populate('bystanders', '_id username rank'))
+            )
+        } catch (error) {
+            console.log(error)
+        } finally {
+        }
+    });
+
     socket.on("join_room_player", async (data) => {
         try {
             let user = await User.findOne({username: data.username})
