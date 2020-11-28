@@ -82,13 +82,16 @@ function last(array) {
     return array[array.length - 1];
 }
 
+
 /**
  * Create the board after a list of moves
- * @param pastMoves a list of moves
+ * @param pastMoves
+ * @param boardSize
+ * @param handicap
  * @returns {GoBoard}
  */
-function buildBoardFromMoves(pastMoves) {
-    let newBoard = createBoard()
+function buildBoardFromMoves(pastMoves, {boardSize = 19, handicap = 0}) {
+    let newBoard = createBoard({boardSize, handicap})
     for (let move of pastMoves) {
         newBoard = newBoard.makeMove(move.sign, move.vertex)
     }
@@ -286,7 +289,7 @@ module.exports = function (socket, io) {
                     players: [],
                     bystanders: []
                 })
-            }else{
+            } else {
                 socket.emit('debug', `create failed because room already exists`)
             }
 
@@ -493,7 +496,10 @@ module.exports = function (socket, io) {
 
 
         if (boards_dict[room_id] == null) { // if our current board is gone, restore the current board using past moves
-            boards_dict[room_id] = buildBoardFromMoves(room.pastMoves)
+            boards_dict[room_id] = buildBoardFromMoves(
+                room.pastMoves,
+                {boardSize: room.boardSize, komi: room.komi}
+            )
         }
 
         let newMove = {sign: sign, vertex: vertex}
@@ -630,7 +636,7 @@ module.exports = function (socket, io) {
                 let room = await Room.findOne({room_id: data.room_id})
                 await setRoomUserAck(room, data.username, "ackRegret")
 
-                if (checkConditionOnAll(room.players, 'ackRegret', true)) {
+                if (checkConditionOnAll(room.players, 'ackRegret', true) && room.pastMoves.length > 1) {
                     // do regret
                     // current user regret, reset 2 moves, else reset 1 move is enough
                     let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
@@ -640,7 +646,10 @@ module.exports = function (socket, io) {
                     }
                     room.currentTurn = room.regretInitiator
                     room.lastMove = last(room.pastMoves)
-                    boards_dict[room_id] = buildBoardFromMoves(room.pastMoves)
+                    boards_dict[room_id] = buildBoardFromMoves(
+                        room.pastMoves,
+                        {boardSize: room.boardSize, komi: room.komi}
+                    )
                     await saveBoardInDB(room, boards_dict[room_id])
 
                     io.in(room_id).emit('regret result', JSON.stringify(room))

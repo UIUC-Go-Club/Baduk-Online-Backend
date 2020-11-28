@@ -51,8 +51,6 @@ router.post('/login', async function (req, res) {
         res.sendStatus(500)
         return console.error(error)
     }
-
-
 });
 
 router.post('/signup', async function (req, res) {
