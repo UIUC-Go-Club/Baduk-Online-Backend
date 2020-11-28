@@ -505,11 +505,15 @@ const createBoard = function ({boardSize = 19, handicap = 0}) {
     let board = undefined
     try {
         board = new Board(initSignMaps[boardSize][handicap])
+        if(board.signMap.length === 0){
+            board = new Board(initSignMaps[boardSize][0])
+        }
     } catch (error) {
         board = new Board(initSignMaps[19][0])
     }
 
+
     return board
 }
 
-module.exports = createBoard
+module.exports = {createBoard}

@@ -6,7 +6,9 @@ const jwt = require("jsonwebtoken");
 const config = require("../env");
 
 router.post('/login', async function (req, res) {
+    console.log('some user want to login')
     if (req.body == null) {
+        console.log('bad request, body should not be null')
         res.status(400).send('bad request, body should not be null')
     }
 
@@ -14,12 +16,14 @@ router.post('/login', async function (req, res) {
     let username = req.body.username
     let password = req.body.password
     if (username == null || password == null) {
+        console.log('required field missing')
         res.status(400).send('required field missing')
     }
 
     let user = await User.findOne({username: username})
     if (user == null) {
-        res.status(400).send('user does not exists')
+        console.log(`user ${username} does not exists`)
+        res.status(400).send('user ${username} does not exists')
     }
 
     try {
@@ -29,6 +33,7 @@ router.post('/login', async function (req, res) {
         let passwordHash = crypto.createHash('md5').update(password).digest('hex')
         if (req.body.username === user.username && passwordHash === user.password) {
             await user.updateOne({lastLoginTime: new Date()})
+            console.log('login successfully')
             res.json({
                 username: username,
                 jwt: jwt.sign({
@@ -41,6 +46,7 @@ router.post('/login', async function (req, res) {
              * If the username or password was wrong, return 401 ( Unauthorized )
              * status code and JSON error message
              */
+            console.log('Wrong username or password!')
             res.status(401).json({
                 error: {
                     message: 'Wrong username or password!'
@@ -54,6 +60,7 @@ router.post('/login', async function (req, res) {
 });
 
 router.post('/signup', async function (req, res) {
+    console.log('some user want to signup')
     if (req.body == null) {
         res.status(400).send('bad request, body should not be null')
     }
@@ -61,10 +68,12 @@ router.post('/signup', async function (req, res) {
     let username = req.body.username
     let password = req.body.password
     if (username == null || password == null) {
+        console.log('required field missing')
         res.status(400).send('required field missing')
     }
 
     if (await User.findOne({username: username}) != null) {
+        console.log('user already exists')
         res.status(400).send('username already existed, please login in')
     }
 
@@ -77,10 +86,12 @@ router.post('/signup', async function (req, res) {
         await newUser.save()
         console.log(`${newUser.username} saved`)
     } catch (error) {
+        console.log('error in saving this new user')
         res.sendStatus(500)
         return console.error(error)
     }
 
+    console.log('signup successfully')
     res.status(201).send(
         JSON.stringify({
             username: username,
