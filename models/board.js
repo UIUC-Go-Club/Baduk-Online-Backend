@@ -503,6 +503,8 @@ const initSignMaps = {
 
 const createBoard = function ({boardSize = 19, handicap = 0}) {
     let board = undefined
+    handicap = handicap > 9 ? 9 : handicap
+    handicap = handicap < 0 ? 0 : handicap
     try {
         board = new Board(initSignMaps[boardSize][handicap])
         if(board.signMap.length === 0){
