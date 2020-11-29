@@ -1,10 +1,6 @@
-const {Room} = require('../models/schema')
-const createBoard = require('../models/board')
-const influence = require('@sabaki/influence');
-
 const sgf = require('@sabaki/sgf')
 const GameTree = require('@sabaki/immutable-gametree')
-const {getBoard} = require('./gametree')
+
 
 const deadstones =  require('@sabaki/deadstones')
 deadstones.useFetch('./node_modules/@sabaki/deadstones/wasm/deadstones_bg.wasm')
