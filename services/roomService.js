@@ -507,6 +507,7 @@ module.exports = function (socket, io) {
 
         room.lastMove = newMove
         room.pastMoves.push(newMove)
+        // room.currentBoardSignedMap = JSON.stringify(boards_dict[room_id].currentBoardSignedMap)
 
         await saveBoardInDB(room, boards_dict[room_id])
 
