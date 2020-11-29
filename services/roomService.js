@@ -550,7 +550,9 @@ module.exports = function (socket, io) {
         try {
             console.log("calc score is called")
             let room = await Room.findOne({room_id: data.room_id})
-            let scoreResult = await calcScoreHeuristic(boards_dict[data.room_id], {komi: room.komi})
+            let gameAnalysis = await calcScoreHeuristic(boards_dict[data.room_id], {komi: room.komi})
+            let scoreResult = gameAnalysis['scoreResult']
+
             if (scoreResult == null) {
                 throw 'invalid score result'
             }

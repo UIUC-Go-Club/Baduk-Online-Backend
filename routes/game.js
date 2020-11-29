@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const {GameRecord} = require('../models/schema')
+const {calcScoreHeuristic, getAreaMap, getHeuristicDeadStones} = require('../utils/helpers')
+const Board = require('@sabaki/go-board')
 
 router.get('/room/:room_id', async function (req, res) {
     let room_id = req.params.room_id
@@ -43,6 +45,24 @@ router.get('/setting/example', async function (req, res) {
     }))
 })
 
+router.post('/analysis/', async function (req, res) {
+    let komi = req.body.komi
+    let handicap = req.body.handicap
+    let signMap = req.body.signMap
+    let scoreBoard = new Board(signMap)
+    if (signMap == null) {
+        console.log("signMap is null")
+        res.status(400).send('bad request, required field missing')
+    }
 
+    try {
+        console.log("analyze board is called")
+        let gameAnalysis = await calcScoreHeuristic(scoreBoard, {komi: komi, discrete: false})
+        res.send(JSON.stringify(gameAnalysis))
+    } catch (error) {
+        console.log(error)
+        res.status(500).send('internal server error')
+    }
+})
 
 module.exports = router;

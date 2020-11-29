@@ -10,15 +10,15 @@ deadstones.useFetch('./node_modules/@sabaki/deadstones/wasm/deadstones_bg.wasm')
  * @param handicap
  * @returns {Promise<void>}
  */
-async function calcScoreHeuristic(scoreBoard, {iterations = 100, komi = 7.5, handicap = 0} = {}) {
+async function calcScoreHeuristic(scoreBoard, {iterations = 100, komi = 7.5, handicap = 0, discrete = true} = {}) {
     let scoreBoardCopy = scoreBoard.clone()
     try {
-        let result = await deadstones
+        let deadStoneVertices = await deadstones
             .guess(scoreBoardCopy.signMap, {
                 finished: true,
                 iterations
             })
-        for (let vertex of result) {
+        for (let vertex of deadStoneVertices) {
             let sign = scoreBoardCopy.get(vertex)
             if (sign === 0) {
                 continue
@@ -26,11 +26,15 @@ async function calcScoreHeuristic(scoreBoard, {iterations = 100, komi = 7.5, han
             scoreBoardCopy.setCaptures(-sign, x => x + 1)
             scoreBoardCopy.set(vertex, 0)
         }
-        let areaMap = influence.map(scoreBoardCopy.signMap, {discrete: true})
+        let areaMap = influence.map(scoreBoardCopy.signMap, {discrete: discrete})
 
-        let r1 = getScore(scoreBoardCopy, areaMap, {komi: komi, handicap: handicap})
-        console.log(r1)
-        return r1
+        let scoreResults = getScore(scoreBoardCopy, areaMap, {komi: komi, handicap: handicap})
+        console.log(scoreResults)
+        return {
+            scoreResult: scoreResults,
+            deadStoneVertices: deadStoneVertices,
+            areaMap: areaMap
+        }
     } catch (error) {
         console.log(error)
     }
