@@ -1,5 +1,5 @@
 const {Room, GameRecord, User, Message} = require('../models/schema')
-const createBoard = require('../models/board')
+const {createBoard} = require('../models/board')
 const {calcScoreHeuristic} = require('../utils/helpers')
 const {defaultReservedTime, defaultCountDownTime, defaultCountDown, defaultKomi, defaultBoardSize, defaultHandicap} = require('../default')
 let boards_dict = {}
