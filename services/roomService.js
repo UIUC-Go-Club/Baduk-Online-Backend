@@ -459,10 +459,12 @@ module.exports = function (socket, io) {
                     && data[room.players[1].username] != null
                     && data[room.players[0].username].color != null
                     && data[room.players[1].username].color != null
-                    && (data[room.players[0].username].color.toLowerCase() === 'black' ||
-                        data[room.players[1].username].color.toLowerCase() === 'white')
-                    && (data[room.players[0].username].color.toLowerCase() === 'black' ||
-                        data[room.players[1].username].color.toLowerCase() === 'white')
+                    && (
+                        (data[room.players[0].username].color.toLowerCase() === 'black'
+                            && data[room.players[1].username].color.toLowerCase() === 'white')
+                        ||
+                        (data[room.players[0].username].color.toLowerCase() === 'white'
+                            && data[room.players[1].username].color.toLowerCase() === 'black'))
                     && data[room.players[0].username].color.toLowerCase() !== data[room.players[1].username].color.toLowerCase()) {
                     room.players[0].color = data[room.players[0].username].color.toLowerCase()
                     room.players[1].color = data[room.players[1].username].color.toLowerCase()
