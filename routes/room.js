@@ -11,6 +11,12 @@ router.use(function timeLog (req, res, next) {
     next()
 })
 
+// room api all room information
+router.get('',  async function (req, res) {
+    let rooms = await Room.find({})
+    res.send(rooms)
+})
+
 // room api to create a specific room with information
 router.post('/:room_id',  async function (req, res) {
     try {
@@ -35,12 +41,6 @@ router.get('/:room_id',  async function (req, res) {
     let room_id = req.params.room_id
     let room = await Room.findOne({room_id: room_id})
     res.send(room)
-})
-
-// room api get specific room information
-router.get('',  async function (req, res) {
-    let rooms = await Room.find({})
-    res.send(rooms)
 })
 
 router.delete('/:room_id', async function (req, res) {
