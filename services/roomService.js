@@ -1,3 +1,4 @@
+const Board = require("@sabaki/go-board")
 const {Room, GameRecord, User, Message} = require('../models/schema')
 const {createBoard} = require('../models/board')
 const {calcScoreHeuristic} = require('../utils/helpers')
@@ -85,13 +86,14 @@ function last(array) {
 
 /**
  * Create the board after a list of moves
+ * @param initBoardSignMap
  * @param pastMoves
  * @param boardSize
  * @param handicap
  * @returns {GoBoard}
  */
-function buildBoardFromMoves(pastMoves, {boardSize = 19, handicap = 0}) {
-    let newBoard = createBoard({boardSize, handicap})
+function buildBoardFromMoves(initBoardSignMap, pastMoves, {boardSize = 19, handicap = 0}) {
+    let newBoard = new Board(initBoardSignMap)
     for (let move of pastMoves) {
         newBoard = newBoard.makeMove(move.sign, move.vertex)
     }
@@ -499,6 +501,7 @@ module.exports = function (socket, io) {
 
         if (boards_dict[room_id] == null) { // if our current board is gone, restore the current board using past moves
             boards_dict[room_id] = buildBoardFromMoves(
+                JSON.parse(room.initBoardSignedMap),
                 room.pastMoves,
                 {boardSize: room.boardSize, komi: room.komi}
             )
@@ -552,7 +555,7 @@ module.exports = function (socket, io) {
         try {
             console.log("calc score is called")
             let room = await Room.findOne({room_id: data.room_id})
-            let gameAnalysis = await calcScoreHeuristic(boards_dict[data.room_id], {komi: room.komi})
+            let gameAnalysis = await calcScoreHeuristic(boards_dict[data.room_id], {komi: room.komi, discrete: false})
             let scoreResult = gameAnalysis['scoreResult']
 
             if (scoreResult == null) {
@@ -641,24 +644,45 @@ module.exports = function (socket, io) {
                 let room = await Room.findOne({room_id: data.room_id})
                 await setRoomUserAck(room, data.username, "ackRegret")
 
-                if (checkConditionOnAll(room.players, 'ackRegret', true) && room.pastMoves.length > 1) {
-                    // do regret
-                    // current user regret, reset 2 moves, else reset 1 move is enough
-                    let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
-                    while (movesToPop > 0 && room.pastMoves.length > 1) {
-                        console.log(room.pastMoves.pop())
-                        movesToPop -= 1
-                    }
-                    room.currentTurn = room.regretInitiator
-                    room.lastMove = last(room.pastMoves)
-                    boards_dict[room_id] = buildBoardFromMoves(
-                        room.pastMoves,
-                        {boardSize: room.boardSize, komi: room.komi}
-                    )
-                    await saveBoardInDB(room, boards_dict[room_id])
+                if (checkConditionOnAll(room.players, 'ackRegret', true)) {
+                    if(room.pastMoves.length > 1){
+                        // do regret
+                        // current user regret, reset 2 moves, else reset 1 move is enough
+                        let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
+                        while (movesToPop > 0 && room.pastMoves.length > 0) {
+                            console.log(room.pastMoves.pop())
+                            movesToPop -= 1
+                        }
+                        room.currentTurn = room.regretInitiator
+                        room.lastMove = last(room.pastMoves)
+                        boards_dict[room_id] = buildBoardFromMoves(
+                            JSON.parse(room.initBoardSignedMap),
+                            room.pastMoves,
+                            {boardSize: room.boardSize, komi: room.komi}
+                        )
+                        await saveBoardInDB(room, boards_dict[room_id])
 
-                    io.in(room_id).emit('regret result', JSON.stringify(room))
-                    await resetAckInRoom(room, "ackRegret")
+                        io.in(room_id).emit('regret result', JSON.stringify(room))
+                        await resetAckInRoom(room, "ackRegret")
+                    }else if(room.pastMoves.length === 1){
+                        if(room.players[room.regretInitiator].color === 'white'){
+                            io.in(room_id).emit('debug', 'white, you are not allow to regret before making the first move')
+                        }else{
+                            console.log(room.pastMoves.pop())
+                            room.currentTurn = room.regretInitiator
+                            room.lastMove = undefined
+                            boards_dict[room_id] = buildBoardFromMoves(
+                                JSON.parse(room.initBoardSignedMap),
+                                room.pastMoves,
+                                {boardSize: room.boardSize, komi: room.komi}
+                            )
+                            await saveBoardInDB(room, boards_dict[room_id])
+
+                            io.in(room_id).emit('regret result', JSON.stringify(room))
+                            await resetAckInRoom(room, "ackRegret")
+                        }
+                    }
+
                 }
             } else {
                 console.log("others refuse to regret a move")

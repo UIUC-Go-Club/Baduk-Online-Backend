@@ -10,7 +10,7 @@ deadstones.useFetch('./node_modules/@sabaki/deadstones/wasm/deadstones_bg.wasm')
  * @param handicap
  * @returns {Promise<void>}
  */
-async function calcScoreHeuristic(scoreBoard, {iterations = 100, komi = 7.5, handicap = 0, discrete = true} = {}) {
+async function calcScoreHeuristic(scoreBoard, {iterations = 100, komi = 7.5, handicap = 0, discrete = false} = {}) {
     let scoreBoardCopy = scoreBoard.clone()
     try {
         let deadStoneVertices = await deadstones
@@ -61,8 +61,9 @@ function getScore(board, areaMap, {komi = 0, handicap = 0} = {}) {
             let index = z > 0 ? 0 : 1
 
             score.area[index] += Math.abs(Math.sign(z))
-            if (board.get([x, y]) === 0)
+            if (board.get([x, y]) === 0){
                 score.territory[index] += Math.abs(Math.sign(z))
+            }
         }
     }
 
