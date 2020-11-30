@@ -294,7 +294,7 @@ module.exports = function (socket, io) {
 
             let reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
             let countdown = data.countdown != null ? data.countdown : defaultCountDown
-            let countDownTime = data.countDownTime != null ? data.countDownTime : defaultCountDownTime
+            let countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountDownTime
             let room = await Room.findOne({room_id: data.room_id})
 
             if (room == null) {
@@ -302,7 +302,7 @@ module.exports = function (socket, io) {
                     room_id: data.room_id,
                     reservedTime: reservedTime,
                     countdown: countdown,
-                    countDownTime: countDownTime,
+                    countdownTime: countdownTime,
                     gameFinished: false,
                     gameStarted: false,
                     playerTotalSocketCount: 1,
@@ -354,7 +354,7 @@ module.exports = function (socket, io) {
 
             let reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
             let countdown = data.countdown != null ? data.countdown : defaultCountDown
-            let countDownTime = data.countDownTime != null ? data.countDownTime : defaultCountDownTime
+            let countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountDownTime
             let room = await Room.findOne({room_id: data.room_id})
 
             if (room == null) {
@@ -362,7 +362,7 @@ module.exports = function (socket, io) {
                     room_id: data.room_id,
                     reservedTime: reservedTime,
                     countdown: countdown,
-                    countDownTime: countDownTime,
+                    countdownTime: countdownTime,
                     gameFinished: false,
                     gameStarted: false,
                     playerTotalSocketCount: 1,
@@ -567,7 +567,7 @@ module.exports = function (socket, io) {
         console.log("time out is entered")
         let room = await Room.findOne({room_id: data.room_id})
         if (!timeoutCheck(room, data.username)) { // 防止虚假timeout
-            socket.emit('debug', `This player still have reservedTimeLest or countDownLeft, should not timeout, check again`)
+            socket.emit('debug', `This player still have reservedTimeLest or countdownLeft, should not timeout, check again`)
             return
         }
         room.winner = data.username === room.players[0].username ? 1 : 0
