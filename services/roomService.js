@@ -448,7 +448,7 @@ module.exports = function (socket, io) {
             room.boardSize = data.boardSize != null ? data.boardSize : defaultBoardSize
             room.handicap = data.handicap != null ? data.handicap : defaultHandicap
             room.komi = data.komi != null ? data.komi : defaultKomi
-            room.countdown = data.countdown != null ? data.countdown : defaultCountDown
+            room.countdown = data.countdown != null ? data.countdown : defaultCountdown
             room.countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountdownTime
             room.reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
             room.randomPlayerColor = data.randomPlayerColor != null ? data.randomPlayerColor : true
