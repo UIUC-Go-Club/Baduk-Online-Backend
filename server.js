@@ -68,12 +68,12 @@ async function setInitBoards() {
         if (rooms[i].handicap == null) {
             rooms[i].handicap = defaultHandicap
         }
-        if (rooms[i].initBoardSignedMap == null) {
+        // if (rooms[i].initBoardSignedMap == null) {
             rooms[i].initBoardSignedMap = JSON.stringify(createBoard({
                 boardSize: rooms[i].boardSize,
                 handicap: rooms[i].handicap
-            }))
-        }
+            }).signMap)
+        // }
         let r = await rooms[i].save()
         // console.log(r)
     }
@@ -89,12 +89,12 @@ async function setInitBoards() {
         if (games[i].handicap == null) {
             games[i].handicap = defaultHandicap
         }
-        if (games[i].initBoardSignedMap == null) {
+        // if (games[i].initBoardSignedMap == null) {
             games[i].initBoardSignedMap = JSON.stringify(createBoard({
                 boardSize: games[i].boardSize,
                 handicap: games[i].handicap
-            }))
-        }
+            }).signMap)
+        // }
         let r = await games[i].save()
         // console.log(r)
     }
