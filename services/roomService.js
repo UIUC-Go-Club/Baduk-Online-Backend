@@ -308,7 +308,8 @@ module.exports = function (socket, io) {
                     playerTotalSocketCount: 1,
                     players: [],
                     bystanders: [],
-                    persistent: data.persistent != null ? data.persistent : false
+                    persistent: data.persistent != null ? data.persistent : false,
+                    boardSize: data.boardSize != null ? data.boardSize : defaultBoardSize
                 })
             } else {
                 socket.emit('debug', `create failed because room already exists`)
@@ -541,7 +542,7 @@ module.exports = function (socket, io) {
 
         room.lastMove = newMove
         room.pastMoves.push(newMove)
-        // room.currentBoardSignedMap = JSON.stringify(boards_dict[room_id].currentBoardSignedMap)
+        room.currentBoardSignedMap = JSON.stringify(boards_dict[room_id].currentBoardSignedMap)
 
         await saveBoardInDB(room, boards_dict[room_id])
 
@@ -689,6 +690,7 @@ module.exports = function (socket, io) {
                             room.pastMoves,
                             {boardSize: room.boardSize, komi: room.komi}
                         )
+                        room.currentBoardSignedMap = JSON.stringify(boards_dict[room_id].currentBoardSignedMap)
                         await saveBoardInDB(room, boards_dict[room_id])
 
                         io.in(room_id).emit('regret result', JSON.stringify(room))

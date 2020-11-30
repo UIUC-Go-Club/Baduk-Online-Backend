@@ -8,17 +8,23 @@ const UserSchema = mongoose.Schema({
     email: {
         type: String
     },
-    phone:{
+    phone: {
         type: String,
     },
-    bio:{
+    bio: {
         type: String
     },
-    gender:{
-        type:String,
+    gender: {
+        type: String,
     },
     password: {
         type: String
+    },
+    securityQuestion: {
+        type: String,
+    },
+    securityAnswer: {
+        type: String,
     },
     rank: {
         type: String
