@@ -67,7 +67,7 @@ function findWinner(room) {
 
 function timeoutCheck(room, username) {
     let playerIndex = findPlayerIndex(room, username)
-    return room.players[i].reservedTimeLeft <= 0 && room.players[i].countdownLeft <= 0
+    return room.players[playerIndex].reservedTimeLeft <= 0 && room.players[playerIndex].countdownLeft <= 0
 }
 
 function findPlayerIndex(room, username) {
@@ -353,8 +353,8 @@ module.exports = function (socket, io) {
             console.log("join room player", data)
 
             let reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
-            let countdown = data.countdown != null ? data.countdown : defaultCountdown
-            let countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountdownTime
+            let countdown = data.countdown != null ? data.countdown : defaultCountDown
+            let countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountDownTime
             let room = await Room.findOne({room_id: data.room_id})
 
             if (room == null) {
