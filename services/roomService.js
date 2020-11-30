@@ -293,8 +293,8 @@ module.exports = function (socket, io) {
             console.log("join room player", data)
 
             let reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
-            let countdown = data.countdown != null ? data.countdown : defaultCountDown
-            let countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountDownTime
+            let countdown = data.countdown != null ? data.countdown : defaultCountdown
+            let countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountdownTime
             let room = await Room.findOne({room_id: data.room_id})
 
             if (room == null) {
@@ -353,8 +353,8 @@ module.exports = function (socket, io) {
             console.log("join room player", data)
 
             let reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
-            let countdown = data.countdown != null ? data.countdown : defaultCountDown
-            let countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountDownTime
+            let countdown = data.countdown != null ? data.countdown : defaultCountdown
+            let countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountdownTime
             let room = await Room.findOne({room_id: data.room_id})
 
             if (room == null) {
@@ -448,7 +448,7 @@ module.exports = function (socket, io) {
             room.boardSize = data.boardSize != null ? data.boardSize : defaultBoardSize
             room.handicap = data.handicap != null ? data.handicap : defaultHandicap
             room.komi = data.komi != null ? data.komi : defaultKomi
-            room.countdown = data.countdown != null ? data.countdown : defaultCountDown
+            room.countdown = data.countdown != null ? data.countdown : defaultCountdown
             room.countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountdownTime
             room.reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
             room.randomPlayerColor = data.randomPlayerColor != null ? data.randomPlayerColor : true
