@@ -136,11 +136,11 @@ const RoomSchema = mongoose.Schema({
         type: Number,
         default: defaultReservedTime // mini-seconds
     },
-    countDown: {
+    countdown: {
         type: Number,
         default: defaultCountDown
     },
-    countDownTime: {
+    countdownTime: {
         type: Number,
         default: defaultCountDownTime, // mini-seconds
     },

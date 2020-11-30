@@ -2,7 +2,7 @@ const Board = require("@sabaki/go-board")
 const {Room, GameRecord, User, Message} = require('../models/schema')
 const {createBoard} = require('../models/board')
 const {calcScoreHeuristic} = require('../utils/helpers')
-const {defaultReservedTime, defaultCountDownTime, defaultCountDown, defaultKomi, defaultBoardSize, defaultHandicap} = require('../default')
+const {defaultReservedTime, defaultCountdownTime, defaultCountdown, defaultKomi, defaultBoardSize, defaultHandicap} = require('../default')
 let boards_dict = {}
 
 function reverseTurn(number) {
@@ -449,7 +449,7 @@ module.exports = function (socket, io) {
             room.handicap = data.handicap != null ? data.handicap : defaultHandicap
             room.komi = data.komi != null ? data.komi : defaultKomi
             room.countdown = data.countdown != null ? data.countdown : defaultCountDown
-            room.countDownTime = data.countDownTime != null ? data.countDownTime : defaultCountDownTime
+            room.countdownTime = data.countdownTime != null ? data.countdownTime : defaultCountdownTime
             room.reservedTime = data.reservedTime != null ? data.reservedTime : defaultReservedTime
             room.randomPlayerColor = data.randomPlayerColor != null ? data.randomPlayerColor : true
 

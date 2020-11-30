@@ -37,7 +37,7 @@ router.get('/setting/example', async function (req, res) {
         handicap: 0,
         komi: 7.5,
         countdown: 3,
-        countDownTime: 30,
+        countdownTime: 30,
         reservedTime: 10 * 60,
         randomPlayerColor: false,
         username1: {color: 'white'},
