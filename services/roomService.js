@@ -225,14 +225,13 @@ async function joinSocketRoom(socket, room, username) {
     socket.gameRoomName = roomName
     socket.user = await User.findOne({username: username,})
     room.socketList.push(socket.id)
-    socket._id = last(room.socketList)._id
     await room.save()
 }
 
 
-function alreadyInBystanders(room, user){
-    for(const bystander of room.bystanders){
-        if(bystander._id === user._id){
+function alreadyInBystanders(room, user) {
+    for (const bystander of room.bystanders) {
+        if (JSON.stringify(room.bystanders[0]._id) === JSON.stringify(user._id)) {
             return true
         }
     }
@@ -240,7 +239,7 @@ function alreadyInBystanders(room, user){
 }
 
 async function joinBystander(room, user, io, socket) {
-    if(!alreadyInBystanders(room, user)){
+    if (!alreadyInBystanders(room, user)) {
         room.bystanders.push(user._id)
     }
     await room.save()
@@ -308,7 +307,8 @@ module.exports = function (socket, io) {
                     gameStarted: false,
                     playerTotalSocketCount: 1,
                     players: [],
-                    bystanders: []
+                    bystanders: [],
+                    persistent: data.persistent != null ? data.persistent : false
                 })
             } else {
                 socket.emit('debug', `create failed because room already exists`)
@@ -726,12 +726,12 @@ module.exports = function (socket, io) {
 
     socket.on("disconnect", async (data) => {
         try {
-            console.log("disconnect is entered")
+            console.log("disconnect is entered", socket.id)
             console.log("game room", socket.gameRoomName)
             console.log('user', socket.user, socket.user == null ? "nobody" : socket.user.username)
             if (socket.user != null) {
                 let room = await Room.findOne({room_id: socket.gameRoomName})
-                room.socketList.pull(socket._id)
+                room.socketList.pull(socket.id)
                 await room.save()
 
                 let playerIndex = findPlayerIndex(room, socket.user.username)
@@ -745,9 +745,11 @@ module.exports = function (socket, io) {
                 }
                 socket.disconnect(0);
                 if (deleteRoomConditionCheck(room)) {
-                    Room.deleteOne({_id: room._id})
+                    Room.deleteOne({_id: room._id}).then(result => {
+                        console.log(`room ${room.room_id} deleted ${result}`)
+                    })
+                    console.log(`${socket.user.username} leaves ${socket.gameRoomName} disconnected`);
                 }
-                console.log(`${socket.user.username} leaves ${socket.gameRoomName} disconnected`);
             }
         } catch (error) {
             console.log(error)
@@ -761,6 +763,7 @@ module.exports = function (socket, io) {
  * @returns {boolean}
  */
 function deleteRoomConditionCheck(room) {
+    console.log("try delete a room")
     let noOnGoingGame = room.gameFinished || (!room.gameStarted)
     return room.socketList.length === 0 && noOnGoingGame && (!room.persistent)
     // let bothPlayerHasLeave = checkConditionOnAll(room.players, 'active', false)

@@ -8,6 +8,15 @@ const UserSchema = mongoose.Schema({
     email: {
         type: String
     },
+    phone:{
+        type: String,
+    },
+    bio:{
+        type: String
+    },
+    gender:{
+        type:String,
+    },
     password: {
         type: String
     },

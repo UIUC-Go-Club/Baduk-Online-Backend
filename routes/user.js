@@ -28,13 +28,40 @@ router.post('/:username', async function (req, res) {
         let newUser = new User(req.body)
         await newUser.save()
         console.log('saved')
-
         res.sendStatus(201)
+        console.log('new users is saved')
     } catch (error) {
         res.sendStatus(500)
         return console.error(error)
-    } finally {
-        console.log('new users is saved')
+    }
+})
+
+router.patch('/:username', async function (req, res) {
+    console.log("try update user information")
+    let username = req.params.username
+    if (username == null) {
+        console.log('username unknown')
+        res.status(400).send('required field missing')
+        return
+    }
+
+    if (await User.findOne({username: username}) == null) {
+        console.log('update a user, but user does not exists')
+        res.status(400).send('user does not exists')
+        return
+    }
+
+    try {
+        let result = await User.updateOne(
+            {'username': username},
+            {$set: req.body}
+        )
+        console.log(result)
+        res.sendStatus(204)
+        console.log('successfully updated')
+    } catch (error) {
+        res.sendStatus(500)
+        console.error(error)
     }
 })
 
@@ -47,12 +74,10 @@ router.delete('/:username', async function (req, res) {
         }
         await User.deleteOne({username: username})
         res.sendStatus(204)
-
+        console.log(`a user deleted`)
     } catch (error) {
         res.sendStatus(500)
         console.error(error)
-    } finally {
-        console.log(`a user deleted`)
     }
 })
 
@@ -60,11 +85,10 @@ router.delete('/delete/all', async function (req, res) {
     try {
         await User.deleteMany({})
         res.sendStatus(204)
+        console.log(`all users deleted`)
     } catch (error) {
         res.sendStatus(500)
         return console.error(error)
-    } finally {
-        console.log(`all users deleted`)
     }
 })
 

@@ -58,66 +58,41 @@ beforeAll(async () => {
     }
 })
 
-describe('get game setting restrictions', () => {
-    it('should return our game restrictions', async (done) => {
+describe('test patching (update) user information', () => {
+    it('update using valid body', async (done) => {
+        let gender = 'male'
+        let bio = 'sample bio'
+        let email = 'new.email@example.com'
 
-        let res = await fetch(`http://localhost:${host}/game/setting/restriction`, {
+        let res = await fetch(`http://localhost:${host}/user/${testUsername}`, {
+            method: 'PATCH',
+            headers: {
+                Authorization: `bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                gender: gender,
+                bio: bio,
+                email: email,
+                wierdField: "it's wierd"
+            })
+        })
+        expect(res.ok).toBe(true)
+
+
+        res = await fetch(`http://localhost:${host}/user/${testUsername}`, {
             method: 'GET',
             headers: {
                 Authorization: `bearer ${token}`,
                 'Content-Type': 'application/json',
             },
         })
+
         expect(res.ok).toBe(true)
         let data = await res.json()
-        expect(data.boardSize).toStrictEqual([9, 13, 19])
-        expect(data.handicap).toStrictEqual([
-            0, 1, 2, 3, 4,
-            5, 6, 7, 8, 9
-        ])
-        expect(data.color).toStrictEqual(['white', 'black'])
-        done()
-    })
-})
-
-describe('get game default setting', () => {
-    it('should return our game restrictions', async (done) => {
-
-        let res = await fetch(`http://localhost:${host}/game/setting/default`, {
-            method: 'GET',
-            headers: {
-                Authorization: `bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        })
-        expect(res.ok).toBe(true)
-        let data = await res.json()
-        console.log(data)
-        expect(data).toStrictEqual({
-            boardSize: 19,
-            handicap: 0,
-            komi: 7.5,
-            countdown: 3,
-            countDownTime: 30,
-            reservedTime: 10 * 60,
-            randomPlayerColor: true,
-        })
-        done()
-    })
-})
-
-describe('get game example game setting', () => {
-    it('should give us an example setting', async (done) => {
-
-        let res = await fetch(`http://localhost:${host}/game/setting/example`, {
-            method: 'GET',
-            headers: {
-                Authorization: `bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        })
-        expect(res.ok).toBe(true)
-        let data = await res.json()
+        expect(data.gender).toBe(gender)
+        expect(data.bio).toBe(bio)
+        expect(data.email).toBe(email)
         console.log(data)
         done()
     })
