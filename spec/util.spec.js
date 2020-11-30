@@ -82,7 +82,8 @@ describe('test calc score', () => {
 
     it('should give us the following score', async () => {
         let r = await calcScoreHeuristic(scoreBoard)
-        expect(JSON.stringify(r)).toBe(JSON.stringify({
+        console.log(r)
+        expect(JSON.stringify(r.scoreResult)).toBe(JSON.stringify({
                 area: [149, 211],
                 territory: [56, 89],
                 captures: [14, 43],
