@@ -18,9 +18,11 @@ router.post('/:username', async function (req, res) {
         let username = req.params.username
         if (username == null) {
             res.status(400).send('required field missing')
+            return
         }
         if (await User.findOne({username: username}) != null) {
             res.status(400).send('user already existed')
+            return
         }
 
         let newUser = new User(req.body)
@@ -41,12 +43,14 @@ router.delete('/:username', async function (req, res) {
         let username = req.params.username
         if (username == null) {
             res.sendStatus(400)
+            return
         }
         await User.deleteOne({username: username})
         res.sendStatus(204)
+
     } catch (error) {
         res.sendStatus(500)
-        return console.error(error)
+        console.error(error)
     } finally {
         console.log(`a user deleted`)
     }

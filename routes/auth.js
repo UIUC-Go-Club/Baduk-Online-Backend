@@ -10,6 +10,7 @@ router.post('/login', async function (req, res) {
     if (req.body == null) {
         console.log('bad request, body should not be null')
         res.status(400).send('bad request, body should not be null')
+        return
     }
 
 
@@ -18,12 +19,14 @@ router.post('/login', async function (req, res) {
     if (username == null || password == null) {
         console.log('required field missing')
         res.status(400).send('required field missing')
+        return
     }
 
     let user = await User.findOne({username: username})
     if (user == null) {
         console.log(`user ${username} does not exists`)
         res.status(400).send('user ${username} does not exists')
+        return
     }
 
     try {
@@ -63,6 +66,7 @@ router.post('/signup', async function (req, res) {
     console.log('some user want to signup')
     if (req.body == null) {
         res.status(400).send('bad request, body should not be null')
+        return
     }
 
     let username = req.body.username
@@ -70,11 +74,13 @@ router.post('/signup', async function (req, res) {
     if (username == null || password == null) {
         console.log('required field missing')
         res.status(400).send('required field missing')
+        return
     }
 
     if (await User.findOne({username: username}) != null) {
         console.log('user already exists')
         res.status(400).send('username already existed, please login in')
+        return
     }
 
     try {
@@ -106,6 +112,7 @@ router.post('/signup', async function (req, res) {
 router.post('/reset_password', async function (req, res) {
     if (req.body == null) {
         res.status(400).send('bad request, body should not be null')
+        return
     }
 
 
@@ -113,11 +120,13 @@ router.post('/reset_password', async function (req, res) {
     let password = req.body.password
     if (username == null || password == null) {
         res.status(400).send('required field missing')
+        return
     }
 
     let user = await User.findOne({username: username})
     if (user == null) {
         res.status(400).send('user does not exists')
+        return
     }
 
     try {

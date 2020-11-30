@@ -70,6 +70,9 @@ const GameRecordSchema = mongoose.Schema({
         areaScore: {type: Number},
         territoryScore: {type: Number},
     },
+    initBoardSignedMap: {
+        type: String
+    },
     gameTree: {
         type: String
     }
@@ -188,6 +191,9 @@ const RoomSchema = mongoose.Schema({
     currentBoardSignedMap: {
         type: String
     },
+    initBoardSignedMap: {
+        type: String
+    }
 })
 
 const MessageSchema = mongoose.Schema({

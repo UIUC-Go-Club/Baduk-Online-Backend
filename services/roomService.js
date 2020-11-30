@@ -121,6 +121,7 @@ async function saveFinishedGame(room) {
             })
         }
         newGameRecord.scoreResult = room.scoreResult
+        newGameRecord.initBoardSignedMap = room.initBoardSignedMap
         newGameRecord.gameTree = JSON.stringify(room.pastMoves)
         await newGameRecord.save()
         for (const player of room.players) {
@@ -185,6 +186,7 @@ async function startAGame(room, io) {
         boards_dict[room.room_id] = createBoard({boardSize: room.boardSize, handicap: room.handicap})
 
         room.currentBoardSignedMap = JSON.stringify(boards_dict[room.room_id].signMap)
+        room.initBoardSignedMap = JSON.stringify(boards_dict[room.room_id].signMap)
         room.lastMove = undefined
         room.gameStarted = true
         await room.save()
