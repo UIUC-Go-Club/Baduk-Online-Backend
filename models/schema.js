@@ -59,7 +59,7 @@ const GameRecordSchema = mongoose.Schema({
         },
         timeout: {
             type: Boolean
-        }
+        },
     }],
     winner: {
         type: Number
@@ -81,6 +81,10 @@ const GameRecordSchema = mongoose.Schema({
 const RoomSchema = mongoose.Schema({
     room_id: {
         type: String, required: true
+    },
+    persistent: { //whether this room will destroy if it becomes empty
+        type: Boolean,
+        default: false
     },
     currentTurn: {  // index 0 or 1, use room.players[index] to find current player
         type: Number
@@ -148,6 +152,7 @@ const RoomSchema = mongoose.Schema({
     regretInitiator: {
         type: Number
     },
+    socketList: [{type: String}],
     players: [{
         userProfile: {
             ref: 'User',

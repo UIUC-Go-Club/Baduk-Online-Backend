@@ -57,7 +57,7 @@ router.post('/analysis/', async function (req, res) {
 
     try {
         console.log("analyze board is called")
-        let gameAnalysis = await calcScoreHeuristic(scoreBoard, {komi: komi, discrete: false})
+        let gameAnalysis = await calcScoreHeuristic(scoreBoard, {komi: komi, discrete: true})
         res.send(JSON.stringify(gameAnalysis))
     } catch (error) {
         console.log(error)

@@ -219,16 +219,32 @@ async function startAGame(room, io) {
     }
 }
 
-async function joinSocketRoom(socket, roomName, username) {
+async function joinSocketRoom(socket, room, username) {
+    let roomName = room.room_id
     socket.join(roomName)
     socket.gameRoomName = roomName
     socket.user = await User.findOne({username: username,})
+    room.socketList.push(socket.id)
+    socket._id = last(room.socketList)._id
+    await room.save()
+}
+
+
+function alreadyInBystanders(room, user){
+    for(const bystander of room.bystanders){
+        if(bystander._id === user._id){
+            return true
+        }
+    }
+    return false
 }
 
 async function joinBystander(room, user, io, socket) {
-    room.bystanders.push(user._id)
+    if(!alreadyInBystanders(room, user)){
+        room.bystanders.push(user._id)
+    }
     await room.save()
-    await joinSocketRoom(socket, room.room_id, user.username)
+    await joinSocketRoom(socket, room, user.username)
     // io.sockets.in(data.room_id).emit('message', {name: 'new user', message: `${data.username} join the room`})
     io.sockets.in(room.room_id).emit("room bystander change",
         JSON.stringify(
@@ -290,6 +306,7 @@ module.exports = function (socket, io) {
                     countDownTime: countDownTime,
                     gameFinished: false,
                     gameStarted: false,
+                    playerTotalSocketCount: 1,
                     players: [],
                     bystanders: []
                 })
@@ -297,7 +314,7 @@ module.exports = function (socket, io) {
                 socket.emit('debug', `create failed because room already exists`)
             }
 
-            await joinSocketRoom(socket, data.room_id, data.username)
+            await joinSocketRoom(socket, room, data.username)
             room.players.push({
                 userProfile: socket.user._id,
                 username: data.username,
@@ -305,6 +322,7 @@ module.exports = function (socket, io) {
                 ackGameEnd: false,
                 active: true,
             })
+            room.playerTotalSocketCount += 1
             await room.save()
 
             socket.emit('info', {
@@ -346,6 +364,7 @@ module.exports = function (socket, io) {
                     countDownTime: countDownTime,
                     gameFinished: false,
                     gameStarted: false,
+                    playerTotalSocketCount: 1,
                     players: [],
                     bystanders: []
                 })
@@ -354,9 +373,11 @@ module.exports = function (socket, io) {
             // when the same user join again
             for (const [i, player] of room.players.entries()) {
                 if (player.username === data.username) {
+                    await joinSocketRoom(socket, room, data.username)
                     room.players[i].active = true
+
                     await room.save()
-                    await joinSocketRoom(socket, data.room_id, data.username)
+
                     socket.emit('info', {
                         fieldName: 'username',
                         username: data.username,
@@ -382,7 +403,7 @@ module.exports = function (socket, io) {
             }
 
 
-            await joinSocketRoom(socket, data.room_id, data.username)
+            await joinSocketRoom(socket, room, data.username)
             room.players.push({
                 userProfile: socket.user._id,
                 username: data.username,
@@ -500,6 +521,14 @@ module.exports = function (socket, io) {
 
 
         if (boards_dict[room_id] == null) { // if our current board is gone, restore the current board using past moves
+            if (room.initBoardSignedMap == null) {
+                room.initBoardSignedMap = JSON.stringify(
+                    createBoard({
+                        boardSize: room.boardSize,
+                        handicap: room.handicap
+                    }).signMap
+                )
+            }
             boards_dict[room_id] = buildBoardFromMoves(
                 JSON.parse(room.initBoardSignedMap),
                 room.pastMoves,
@@ -645,7 +674,7 @@ module.exports = function (socket, io) {
                 await setRoomUserAck(room, data.username, "ackRegret")
 
                 if (checkConditionOnAll(room.players, 'ackRegret', true)) {
-                    if(room.pastMoves.length > 1){
+                    if (room.pastMoves.length > 1) {
                         // do regret
                         // current user regret, reset 2 moves, else reset 1 move is enough
                         let movesToPop = room.regretInitiator === room.currentTurn ? 2 : 1
@@ -664,10 +693,10 @@ module.exports = function (socket, io) {
 
                         io.in(room_id).emit('regret result', JSON.stringify(room))
                         await resetAckInRoom(room, "ackRegret")
-                    }else if(room.pastMoves.length === 1){
-                        if(room.players[room.regretInitiator].color === 'white'){
+                    } else if (room.pastMoves.length === 1) {
+                        if (room.players[room.regretInitiator].color === 'white') {
                             io.in(room_id).emit('debug', 'white, you are not allow to regret before making the first move')
-                        }else{
+                        } else {
                             console.log(room.pastMoves.pop())
                             room.currentTurn = room.regretInitiator
                             room.lastMove = undefined
@@ -702,20 +731,20 @@ module.exports = function (socket, io) {
             console.log('user', socket.user, socket.user == null ? "nobody" : socket.user.username)
             if (socket.user != null) {
                 let room = await Room.findOne({room_id: socket.gameRoomName})
+                room.socketList.pull(socket._id)
+                await room.save()
+
                 let playerIndex = findPlayerIndex(room, socket.user.username)
                 if (playerIndex !== -1) {
-                    if (room.gameStarted) {
-                        room.players[playerIndex].active = false
-                    } else {
-                        room.players.pull({_id: room.players[playerIndex]._id})
-                    }
+                    room.players[playerIndex].active = false
+
                     await room.save()
                     io.sockets.in(data.room_id).emit('player leave', JSON.stringify(room))
                 } else {
                     await leaveBystander(room, io, socket)
                 }
                 socket.disconnect(0);
-                if (emptyRoom(room)) {
+                if (deleteRoomConditionCheck(room)) {
                     Room.deleteOne({_id: room._id})
                 }
                 console.log(`${socket.user.username} leaves ${socket.gameRoomName} disconnected`);
@@ -726,6 +755,15 @@ module.exports = function (socket, io) {
     });
 };
 
-function emptyRoom(room) {
-    return room.players.length === 0 && room.bystanders.length === 0
+/**
+ * When there is no active socket, and no on-going game happening and room.persistant is false, delete the room
+ * @param room
+ * @returns {boolean}
+ */
+function deleteRoomConditionCheck(room) {
+    let noOnGoingGame = room.gameFinished || (!room.gameStarted)
+    return room.socketList.length === 0 && noOnGoingGame && (!room.persistent)
+    // let bothPlayerHasLeave = checkConditionOnAll(room.players, 'active', false)
+    // let noBystander = room.bystanders.length === 0
+    // return bothPlayerHasLeave && noOnGoingGame && noBystander && (!room.persistent)
 }
