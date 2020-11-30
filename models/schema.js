@@ -27,7 +27,8 @@ const UserSchema = mongoose.Schema({
         type: String,
     },
     rank: {
-        type: String
+        type: String,
+        default: '1D'
     },
     lastLoginTime: {
         type: Date
@@ -95,7 +96,7 @@ const GameRecordSchema = mongoose.Schema({
 
 const RoomSchema = mongoose.Schema({
     room_id: {
-        type: String, required: true
+        type: String, required: true, index: {unique: true}
     },
     persistent: { //whether this room will destroy if it becomes empty
         type: Boolean,
@@ -108,10 +109,12 @@ const RoomSchema = mongoose.Schema({
         type: Number
     },
     gameStarted: {
-        type: Boolean
+        type: Boolean,
+        default: false
     },
     gameFinished: {
-        type: Boolean
+        type: Boolean,
+        default: false
     },
     komi: {
         type: Number,
