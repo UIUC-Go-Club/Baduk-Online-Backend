@@ -176,7 +176,13 @@ async function startAGame(room, io) {
             let second_color = first_color === 'white' ? 'black' : 'white'
             room.players[0].color = first_color
             room.players[1].color = second_color
-            room.currentTurn = first_color === 'black' ? 0 : 1
+        }
+
+        // 没有让子 黑棋先行, 有让子 白棋先行
+        if (room.handicap === 0){
+            room.currentTurn = room.players[0].color === 'black' ? 0 : 1
+        } else{
+            room.currentTurn = room.players[0].color === 'white' ? 0 : 1
         }
 
         // set time
@@ -203,7 +209,7 @@ async function startAGame(room, io) {
             })
         )
 
-        io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
+        // io.sockets.in(room.room_id).emit('game start', JSON.stringify(room))
 
         let gameStartMessage = new Message()
         gameStartMessage.room_id = room.room_id;
@@ -267,7 +273,7 @@ async function leaveBystander(room, io, socket) {
 }
 
 module.exports = function (socket, io) {
-    socket.on("join_room_bystander", async (data) => {
+    socket.on("join room bystander", async (data) => {
         console.log("join room bystander")
         let room = await Room.findOne({room_id: data.room_id})
         if (room == null) {
@@ -343,7 +349,8 @@ module.exports = function (socket, io) {
         }
     });
 
-    socket.on("join_room_player", async (data) => {
+    socket.on("join room player", async (data) => {
+
         try {
             let user = await User.findOne({username: data.username})
             if (user == null) {
@@ -587,7 +594,9 @@ module.exports = function (socket, io) {
         try {
             console.log("calc score is called")
             let room = await Room.findOne({room_id: data.room_id})
-            let gameAnalysis = await calcScoreHeuristic(boards_dict[data.room_id], {komi: room.komi, discrete: false})
+
+            // always use finished = false when calculate score. finished=true的话不能有连通图, 但是这个一般做不到
+            let gameAnalysis = await calcScoreHeuristic(boards_dict[data.room_id], {komi: room.komi, discrete: false, gameFinished: false})
             let scoreResult = gameAnalysis['scoreResult']
 
             if (scoreResult == null) {

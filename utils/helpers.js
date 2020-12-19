@@ -10,7 +10,7 @@ deadstones.useFetch('./node_modules/@sabaki/deadstones/wasm/deadstones_bg.wasm')
  * @param handicap
  * @returns {Promise<void>}
  */
-async function calcScoreHeuristic(scoreBoard, {iterations = 100, gameFinished=true, komi = 7.5, handicap = 0, discrete = false} = {}) {
+async function calcScoreHeuristic(scoreBoard, {iterations = 100, gameFinished=false, komi = 7.5, handicap = 0, discrete = false} = {}) {
     let scoreBoardCopy = scoreBoard.clone()
     try {
         let deadStoneVertices = await deadstones
